@@ -1,0 +1,175 @@
+{
+  "source_file": "PLANO HIDRAULICA_Santa fe-Act 2025.dxf",
+  "assumed_source_crs": {
+    "epsg": 5347,
+    "name": "POSGAR 2007 / Argentina 5",
+    "note": "DXF does not explicitly declare an EPSG code; inferred from coordinate range/location. Verify against authoritative project metadata before engineering use."
+  },
+  "output_crs": "EPSG:4326 (GeoJSON lon/lat)",
+  "groups": {
+    "cotas": {
+      "features": 10399,
+      "file": "cotas.geojson",
+      "layers": [
+        "Cotas",
+        "0_cotas",
+        "Cotas Fondo conductos"
+      ]
+    },
+    "conductos": {
+      "features": 10672,
+      "file": "conductos.geojson",
+      "layers": [
+        "Conducto"
+      ]
+    },
+    "bocas_tormenta": {
+      "features": 16469,
+      "file": "bocas_tormenta.geojson",
+      "layers": [
+        "Bocas Tormenta"
+      ]
+    },
+    "bocas_registro": {
+      "features": 4254,
+      "file": "bocas_registro.geojson",
+      "layers": [
+        "Bocas Registro"
+      ]
+    },
+    "cuencas": {
+      "features": 3583,
+      "file": "cuencas.geojson",
+      "layers": [
+        "Cuencas"
+      ]
+    },
+    "subcuencas": {
+      "features": 1641,
+      "file": "subcuencas.geojson",
+      "layers": [
+        "Subcuencas"
+      ]
+    },
+    "casabombas": {
+      "features": 21,
+      "file": "casabombas.geojson",
+      "layers": [
+        "Casabomba"
+      ]
+    },
+    "canales": {
+      "features": 668,
+      "file": "canales.geojson",
+      "layers": [
+        "Canal a cielo abierto",
+        "Canal recubierto a cielo abierto"
+      ]
+    },
+    "alcantarillas": {
+      "features": 177,
+      "file": "alcantarillas.geojson",
+      "layers": [
+        "Alcantarillas"
+      ]
+    },
+    "defensas": {
+      "features": 642,
+      "file": "defensas.geojson",
+      "layers": [
+        "Terraplenes y Defensas"
+      ]
+    },
+    "estaciones_bombeo": {
+      "features": 142,
+      "file": "estaciones_bombeo.geojson",
+      "layers": [
+        "Est. Bombeo Compuerta",
+        "Est. de Rebombeo",
+        "Est. Bombeo sin oobra civil"
+      ]
+    },
+    "reservorios": {
+      "features": 374,
+      "file": "reservorios.geojson",
+      "layers": [
+        "RESERVORIOS"
+      ]
+    },
+    "descargas_gravedad": {
+      "features": 22,
+      "file": "descargas_gravedad.geojson",
+      "layers": [
+        "Descarga por gravedad"
+      ]
+    }
+  },
+  "skipped_entities": {
+    "bocas_tormenta:HATCH": 6935,
+    "cotas:DIMENSION": 1,
+    "cotas:MULTILEADER": 122,
+    "estaciones_bombeo:HATCH": 1,
+    "reservorios:HATCH": 28
+  },
+  "warning": "CAD labels named Cotas were preserved as text/numeric_value but are NOT assumed to be ground elevations without semantic validation.",
+  "cleanup_bbox_wgs84": [
+    -61.05,
+    -32.05,
+    -60.25,
+    -31.15
+  ],
+  "cleanup_summary": {
+    "cuencas.geojson": {
+      "kept": 3583,
+      "dropped_outside_metro_bbox": 0
+    },
+    "bocas_registro.geojson": {
+      "kept": 4254,
+      "dropped_outside_metro_bbox": 0
+    },
+    "estaciones_bombeo.geojson": {
+      "kept": 142,
+      "dropped_outside_metro_bbox": 0
+    },
+    "defensas.geojson": {
+      "kept": 642,
+      "dropped_outside_metro_bbox": 3
+    },
+    "casabombas.geojson": {
+      "kept": 21,
+      "dropped_outside_metro_bbox": 0
+    },
+    "subcuencas.geojson": {
+      "kept": 1641,
+      "dropped_outside_metro_bbox": 0
+    },
+    "descargas_gravedad.geojson": {
+      "kept": 22,
+      "dropped_outside_metro_bbox": 0
+    },
+    "conductos.geojson": {
+      "kept": 10672,
+      "dropped_outside_metro_bbox": 3
+    },
+    "bocas_tormenta.geojson": {
+      "kept": 16469,
+      "dropped_outside_metro_bbox": 6
+    },
+    "canales.geojson": {
+      "kept": 668,
+      "dropped_outside_metro_bbox": 0
+    },
+    "reservorios.geojson": {
+      "kept": 374,
+      "dropped_outside_metro_bbox": 1
+    },
+    "alcantarillas.geojson": {
+      "kept": 177,
+      "dropped_outside_metro_bbox": 0
+    },
+    "cotas.geojson": {
+      "kept": 10399,
+      "dropped_outside_metro_bbox": 0
+    }
+  }
+}

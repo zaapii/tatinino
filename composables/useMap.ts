@@ -18,6 +18,7 @@ export function useMapConfig() {
     maxZoom: 18,
     baseStyle: {
       version: 8 as const,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         openstreetmap: {
           type: 'raster' as const,
