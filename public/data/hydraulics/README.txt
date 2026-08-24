@@ -8,3 +8,9 @@ IMPORTANT: verify CRS against original CAD/project metadata before using coordin
 The layer Cotas contains CAD annotations. numeric_value is parsed from visible text but is not automatically classified as terrain elevation.
 
 Files are grouped for MapLibre-friendly loading. HATCH and complex annotation entities are intentionally omitted to reduce noise/size.
+
+Web-derived view: cotas_fondo_conductos.geojson contains only annotations from
+"Cotas Fondo conductos" whose text begins with FC, CFC, FCa, "Cota:" or
+"Fondo Canal". display_value is the final numeric token in the annotation;
+values outside 5-25 were excluded. This is an inferred classification, not an
+authoritative survey validation.

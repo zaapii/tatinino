@@ -53,7 +53,7 @@ watch(reportOpen, (open) => { if (open) layersOpen.value = false })
 
     <section v-if="!selectedPoint" class="surface-panel absolute right-3 top-[164px] z-20 w-[218px] rounded-xl p-3 sm:bottom-[58px] sm:right-[62px] sm:top-auto sm:w-[298px] sm:p-3.5">
       <div class="flex items-center gap-2"><Database :size="15" class="text-river"/><p class="text-[11px] font-semibold sm:text-xs">49.064 entidades CAD georreferenciadas</p></div>
-      <p class="mt-2 text-[9px] leading-relaxed text-ink/48 sm:text-[10px]">13 conjuntos GeoJSON derivados del Plano Hidráulica Santa Fe, actualización 2025.</p>
+      <p class="mt-2 text-[9px] leading-relaxed text-ink/48 sm:text-[10px]">13 conjuntos fuente y una vista de cotas FC clasificada para web.</p>
       <p class="mt-2 border-t border-ink/8 pt-2 text-[9px] leading-relaxed text-ink/42">Proyección de origen asumida; requiere validación antes de un uso técnico.</p>
     </section>
 

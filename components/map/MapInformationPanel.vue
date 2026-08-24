@@ -14,7 +14,7 @@ const open = defineModel<boolean>({ default: false })
         <p><strong>Situación actual:</strong> niveles, lluvias, pronósticos y alertas se incorporarán desde fuentes oficiales.</p>
         <p><strong>Participación:</strong> los reportes ciudadanos tendrán validación y seguimiento en una etapa posterior.</p>
       </div>
-      <div class="mt-4 flex gap-3 rounded-xl bg-[#fff8ea] p-4"><TriangleAlert :size="19" class="mt-0.5 shrink-0 text-[#a66d13]"/><p class="text-xs leading-relaxed text-ink/68">Las coordenadas de origen fueron inferidas como POSGAR 2007 / Argentina 5. Además, las anotaciones llamadas “cotas” no están clasificadas automáticamente como altura del terreno. Estos datos sirven para explorar el plano, no para tomar decisiones de ingeniería.</p></div>
+      <div class="mt-4 flex gap-3 rounded-xl bg-[#fff8ea] p-4"><TriangleAlert :size="19" class="mt-0.5 shrink-0 text-[#a66d13]"/><p class="text-xs leading-relaxed text-ink/68">Las coordenadas de origen fueron inferidas como POSGAR 2007 / Argentina 5. Solo se rotulan como “cota de fondo” las anotaciones con prefijo FC, CFC o FCa; las demás medidas permanecen sin clasificar. Estos datos sirven para explorar el plano, no para tomar decisiones de ingeniería.</p></div>
       <p class="mt-4 border-t border-ink/10 pt-4 text-[11px] leading-relaxed text-ink/50">Seleccioná una línea, punto o área para ver su capa original, tipo de entidad y referencia CAD.</p>
     </section>
   </Transition>

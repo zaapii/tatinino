@@ -3,8 +3,12 @@ import type { MapLayerDefinition } from '~/types/map'
 export function useMapLayers() {
   const layers = ref<MapLayerDefinition[]>([
     {
-      id: 'elevation', label: 'Cotas anotadas', description: 'Puntos visibles desde la escala de ciudad; valores rotulados al acercarse', enabled: false, status: 'available', group: 'territory',
-      source: { file: 'cotas.geojson', featureCount: 10399, color: '#9b6b32', minZoom: 11.5, lineWidth: 1, pointRadius: 2.3 },
+      id: 'conduit-elevations', label: 'Cotas de fondo de conductos', description: '796 valores FC identificados; no representan la altura de la calle o el terreno', enabled: true, status: 'available', group: 'territory',
+      source: { file: 'cotas_fondo_conductos.geojson', featureCount: 796, color: '#9b6b32', minZoom: 11.5, lineWidth: 1, pointRadius: 3 },
+    },
+    {
+      id: 'elevation', label: 'Anotaciones numéricas sin clasificar', description: 'Medidas heterogéneas del CAD; se conservan para auditoría, no como altitud', enabled: false, status: 'available', group: 'territory',
+      source: { file: 'cotas.geojson', featureCount: 10399, color: '#716961', minZoom: 13.5, lineWidth: 1, pointRadius: 2 },
     },
     { id: 'vulnerability', label: 'Vulnerabilidad territorial', description: 'Zonas caracterizadas por fuentes oficiales', enabled: false, status: 'soon', group: 'territory' },
     {

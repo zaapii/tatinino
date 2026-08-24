@@ -109,16 +109,16 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
     })
   }
 
-  if (definition.id === 'elevation' && !map.getLayer(styleIdsFor(definition.id)[3])) {
+  if (definition.id === 'conduit-elevations' && !map.getLayer(styleIdsFor(definition.id)[3])) {
     map.addLayer({
       id: styleIdsFor(definition.id)[3],
       type: 'symbol',
       source: sourceId,
       minzoom: 14,
-      filter: ['all', ['==', ['geometry-type'], 'Point'], ['has', 'numeric_value']],
+      filter: ['all', ['==', ['geometry-type'], 'Point'], ['has', 'display_label']],
       layout: {
         visibility,
-        'text-field': ['to-string', ['get', 'numeric_value']],
+        'text-field': ['get', 'display_label'],
         'text-font': ['Open Sans Regular'],
         'text-size': 10.5,
         'text-offset': [0, 1.15],
@@ -196,6 +196,7 @@ watch(
 onMounted(async () => {
   if (!mapElement.value) return
   const maplibregl = await import('maplibre-gl')
+  maplibregl.setWorkerUrl('/vendor/maplibre-gl-worker.mjs')
   map = new maplibregl.Map({
     container: mapElement.value,
     style: mapConfig.baseStyle,

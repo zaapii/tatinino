@@ -20,12 +20,14 @@ const propertyLabels: Record<string, string> = {
   handle: 'Referencia CAD',
   text: 'Anotación',
   numeric_value: 'Valor numérico',
+  display_value: 'Cota interpretada',
+  classification: 'Clasificación',
   radius_m_drawing_units: 'Radio en plano',
 }
 
 const detailRows = computed(() => {
   if (!props.point.feature) return []
-  const preferredKeys = ['text', 'numeric_value', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
+  const preferredKeys = ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
   return preferredKeys
     .filter(key => props.point.feature?.properties[key] !== undefined && props.point.feature?.properties[key] !== null && props.point.feature?.properties[key] !== '')
     .map(key => ({ label: propertyLabels[key] ?? key, value: props.point.feature!.properties[key] }))
@@ -55,7 +57,8 @@ const detailRows = computed(() => {
         </div>
       </dl>
 
-      <p v-if="point.feature.layerId === 'elevation'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Esta anotación no está validada como cota del terreno. Puede referirse a conductos u otros elementos de obra.</p>
+      <p v-if="point.feature.layerId === 'conduit-elevations'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Es una cota de fondo de conducto inferida por el prefijo FC del plano. No representa la altura de la calle ni del terreno.</p>
+      <p v-else-if="point.feature.layerId === 'elevation'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> El significado y la unidad de esta anotación no están clasificados. Se conserva únicamente para revisar el plano original.</p>
     </div>
 
     <div v-else class="mt-4 flex items-start gap-3 rounded-xl bg-mist p-3.5"><MapPin :size="18" class="mt-0.5 shrink-0 text-river"/><div><p class="text-xs font-semibold">Sin elemento técnico seleccionado</p><p class="mt-1 text-xs leading-relaxed text-ink/57">Activá una capa o acercate al mapa para consultar su información.</p></div></div>
