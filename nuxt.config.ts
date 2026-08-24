@@ -26,7 +26,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'es' },
       titleTemplate: '%s · Santa Fe — Información Hídrica',
       meta: [
-        { name: 'description', content: 'Información hídrica pública para la prevención y la toma de decisiones en Santa Fe Capital.' },
+        { name: 'description', content: 'Información pública para comprender el riesgo hídrico, anticipar escenarios y fortalecer la prevención en Santa Fe Capital.' },
         { name: 'theme-color', content: '#092235' },
       ],
     },

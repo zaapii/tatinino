@@ -4,6 +4,7 @@ export type MapPoint = {
 }
 
 export type LayerStatus = 'active' | 'available' | 'soon'
+export type LayerGroup = 'territory' | 'protection' | 'current' | 'community'
 
 export type MapLayerDefinition = {
   id: string
@@ -11,6 +12,7 @@ export type MapLayerDefinition = {
   description: string
   enabled: boolean
   status: LayerStatus
+  group: LayerGroup
 }
 
 export type GeospatialSourceConfig = {

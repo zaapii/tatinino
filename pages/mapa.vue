@@ -5,16 +5,20 @@ import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
 useSeoMeta({
-  title: 'Mapa de cotas',
-  description: 'Mapa interactivo para comprender el terreno y el riesgo hídrico en Santa Fe Capital.',
+  title: 'Mapa de riesgo hídrico',
+  description: 'Mapa interactivo para comprender riesgos, anticipar escenarios y fortalecer la prevención en Santa Fe Capital.',
 })
 
 const { layers, toggleLayer } = useMapLayers()
 const selectedPoint = ref<MapPoint | null>(null)
 const layersOpen = ref(false)
+const reportOpen = ref(false)
 const infoOpen = ref(false)
 const mapReady = ref(false)
 const waterVisible = computed(() => layers.value.find(layer => layer.id === 'water')?.enabled ?? true)
+
+watch(layersOpen, (open) => { if (open) reportOpen.value = false })
+watch(reportOpen, (open) => { if (open) layersOpen.value = false })
 </script>
 
 <template>
@@ -31,15 +35,16 @@ const waterVisible = computed(() => layers.value.find(layer => layer.id === 'wat
     <header class="surface-panel absolute inset-x-0 top-0 z-20 flex min-h-[98px] items-start justify-between gap-4 border-x-0 border-t-0 px-4 py-4 sm:inset-x-5 sm:top-5 sm:min-h-0 sm:rounded-2xl sm:border sm:px-5 sm:py-4">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 class="text-lg font-semibold leading-tight tracking-[-.025em] sm:text-[1.35rem]">Mapa de cotas de Santa Fe</h1>
-          <span class="ui-label rounded-full border border-sand/60 bg-[#fff8e9] px-2.5 py-1 text-[9px] text-[#87590f]">MVP · Datos en preparación</span>
+          <h1 class="text-lg font-semibold leading-tight tracking-[-.025em] sm:text-[1.35rem]">Mapa de riesgo hídrico de Santa Fe</h1>
+          <span class="ui-label rounded-full border border-sand/60 bg-[#fff8e9] px-2.5 py-1 text-[9px] text-[#87590f]">MVP · Capas en incorporación</span>
         </div>
-        <p class="mt-1.5 max-w-2xl text-[11px] leading-snug text-ink/55 sm:text-xs">Visualización del terreno y herramientas para comprender el riesgo hídrico.</p>
+        <p class="mt-1.5 max-w-2xl text-[11px] leading-snug text-ink/55 sm:text-xs">Información territorial para comprender riesgos, anticipar escenarios y fortalecer la prevención.</p>
       </div>
       <div class="hidden shrink-0 items-center gap-2 text-[10px] text-ink/48 md:flex"><span class="size-1.5 rounded-full bg-river"/> Mapa base OpenStreetMap</div>
     </header>
 
-    <MapLayersControl v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
+    <MapLayersControl v-if="!reportOpen" v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
+    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" />
     <MapInformationPanel v-model="infoOpen" />
     <MapElevationLegend />
     <MapPointInfoPanel v-if="selectedPoint" :point="selectedPoint" @close="selectedPoint = null" />
@@ -54,6 +59,6 @@ const waterVisible = computed(() => layers.value.find(layer => layer.id === 'wat
       <p class="mt-1 text-[9px] font-medium text-ink/48 sm:text-[10px]">Disponible cuando se incorporen los datos de elevación.</p>
     </section>
 
-    <div class="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
+    <div v-if="!selectedPoint && !layersOpen && !reportOpen" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
   </div>
 </template>

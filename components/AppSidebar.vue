@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Map, Waves, Newspaper, ArrowUpRight, ShieldCheck } from 'lucide-vue-next'
+import { Map, Waves, Newspaper, Landmark, ArrowUpRight, ShieldCheck } from 'lucide-vue-next'
 
 const route = useRoute()
 const items = [
   { to: '/mapa', label: 'Mapa', hint: 'Territorio y capas', icon: Map },
   { to: '/el-nino', label: 'El Niño', hint: 'Contexto climático', icon: Waves },
   { to: '/novedades', label: 'Novedades', hint: 'Notas y explicaciones', icon: Newspaper },
+  { to: '/proyecto', label: 'Proyecto', hint: 'Propósito y alcance', icon: Landmark },
 ]
 
 const normalizedPath = computed(() => route.path.replace(/\/+$/, '') || '/')

@@ -46,6 +46,19 @@ NUXT_PUBLIC_RASTER_TILES_BASE_URL=
 
 El MVP utiliza teselas raster de OpenStreetMap. Las capas técnicas permanecen identificadas como pendientes hasta disponer de fuentes oficiales.
 
+El catálogo futuro se organiza en cuatro grupos:
+
+- territorio y riesgo
+- sistema de protección
+- situación actual
+- participación ciudadana
+
+La interfaz de reportes es demostrativa y no envía información. Está preparada para incorporar posteriormente ubicación, categorías, validación, seguimiento y una distinción explícita entre reportes comunitarios e información oficial.
+
+## Alcance institucional
+
+La ruta `/proyecto` presenta el propósito, alcance y rol institucional de la iniciativa. Explica el mapa como una infraestructura pública de conocimiento y organiza la propuesta en información comprensible, participación trazable y comunicación verificable.
+
 ## Publicaciones editoriales
 
 La sección `/novedades` utiliza un modelo de contenido basado en bloques definido en `types/content.ts`. Los ejemplos viven temporalmente en `composables/useArticles.ts` y pueden reemplazarse más adelante por la salida de un CMS o editor WYSIWYG sin cambiar las plantillas.

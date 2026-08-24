@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Menu, X, Map, Waves, Newspaper, ShieldCheck } from 'lucide-vue-next'
+import { Menu, X, Map, Waves, Newspaper, Landmark, ShieldCheck } from 'lucide-vue-next'
 const open = ref(false)
 const route = useRoute()
 const normalizedPath = computed(() => route.path.replace(/\/+$/, '') || '/')
@@ -22,6 +22,7 @@ watch(() => route.path, () => { open.value = false })
         <NuxtLink to="/mapa" class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold" :class="normalizedPath === '/mapa' || normalizedPath === '/' ? 'bg-mist text-river' : ''"><Map :size="19"/> Mapa</NuxtLink>
         <NuxtLink to="/el-nino" class="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold" :class="normalizedPath === '/el-nino' ? 'bg-mist text-river' : ''"><Waves :size="19"/> El Niño</NuxtLink>
         <NuxtLink to="/novedades" class="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold" :class="normalizedPath.startsWith('/novedades') ? 'bg-mist text-river' : ''"><Newspaper :size="19"/> Novedades</NuxtLink>
+        <NuxtLink to="/proyecto" class="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold" :class="normalizedPath === '/proyecto' ? 'bg-mist text-river' : ''"><Landmark :size="19"/> Proyecto</NuxtLink>
         <div class="mt-4 flex items-center gap-2 border-t border-ink/10 px-3 pt-4 text-xs text-ink/55"><ShieldCheck :size="15" class="text-river"/> Datos abiertos · Fuentes verificables</div>
       </nav>
     </Transition>
