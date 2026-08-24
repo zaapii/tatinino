@@ -1,0 +1,29 @@
+{
+  "name": "santa-fe-informacion-hidrica",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@fontsource-variable/instrument-sans": "latest",
+    "@fontsource/ibm-plex-mono": "latest",
+    "lucide-vue-next": "latest",
+    "maplibre-gl": "latest",
+    "nuxt": "^4.0.0",
+    "vue": "latest",
+    "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "latest",
+    "@vueuse/nuxt": "latest",
+    "tailwindcss": "latest",
+    "typescript": "5.9.3",
+    "vue-tsc": "latest"
+  },
+  "packageManager": "pnpm@10.14.0"
+}
