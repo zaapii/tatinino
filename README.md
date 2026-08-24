@@ -45,3 +45,17 @@ NUXT_PUBLIC_RASTER_TILES_BASE_URL=
 ```
 
 El MVP utiliza teselas raster de OpenStreetMap. Las capas técnicas permanecen identificadas como pendientes hasta disponer de fuentes oficiales.
+
+## Publicaciones editoriales
+
+La sección `/novedades` utiliza un modelo de contenido basado en bloques definido en `types/content.ts`. Los ejemplos viven temporalmente en `composables/useArticles.ts` y pueden reemplazarse más adelante por la salida de un CMS o editor WYSIWYG sin cambiar las plantillas.
+
+Bloques disponibles en el MVP:
+
+- párrafo
+- subtítulo
+- lista
+- destacado informativo o de atención
+- cita
+
+La portada, las tarjetas y la plantilla de lectura consumen el mismo objeto de artículo tipado.

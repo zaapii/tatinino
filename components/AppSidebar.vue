@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { Map, Waves, ArrowUpRight, ShieldCheck } from 'lucide-vue-next'
+import { Map, Waves, Newspaper, ArrowUpRight, ShieldCheck } from 'lucide-vue-next'
 
 const route = useRoute()
 const items = [
   { to: '/mapa', label: 'Mapa', hint: 'Territorio y capas', icon: Map },
   { to: '/el-nino', label: 'El Niño', hint: 'Contexto climático', icon: Waves },
+  { to: '/novedades', label: 'Novedades', hint: 'Notas y explicaciones', icon: Newspaper },
 ]
+
+const isActive = (to: string) => to === '/mapa'
+  ? route.path === '/mapa' || route.path === '/'
+  : route.path.startsWith(to)
 </script>
 
 <template>
@@ -24,7 +29,7 @@ const items = [
     </NuxtLink>
 
     <nav class="mt-10 space-y-1" aria-label="Secciones principales">
-      <NuxtLink v-for="item in items" :key="item.to" :to="item.to" class="group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors" :class="route.path === item.to || (item.to === '/mapa' && route.path === '/') ? 'bg-white text-ink' : 'text-white/72 hover:bg-white/8 hover:text-white'">
+      <NuxtLink v-for="item in items" :key="item.to" :to="item.to" class="group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors" :class="isActive(item.to) ? 'bg-white text-ink' : 'text-white/72 hover:bg-white/8 hover:text-white'">
         <component :is="item.icon" :size="19" :stroke-width="1.8" />
         <div class="min-w-0 flex-1">
           <p class="text-sm font-semibold">{{ item.label }}</p>
