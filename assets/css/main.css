@@ -3,8 +3,9 @@
 @theme {
   --color-ink: #092235;
   --color-ink-soft: #173d52;
-  --color-river: #1f7978;
-  --color-river-light: #77bec0;
+  --color-river: #1c9eda;
+  --color-river-light: #78ccef;
+  --color-river-ink: #0877ad;
   --color-mist: #edf4f3;
   --color-sand: #f3b85b;
   --color-paper: #f8faf9;
@@ -28,11 +29,11 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
 
 :focus-visible {
-  outline: 3px solid rgba(31, 121, 120, .32);
+  outline: 3px solid rgba(28, 158, 218, .32);
   outline-offset: 3px;
 }
 
-::selection { background: #bfe2df; color: var(--color-ink); }
+::selection { background: #c4ebfb; color: var(--color-ink); }
 
 .ui-label {
   font-family: var(--font-mono);
@@ -41,6 +42,8 @@ button { font: inherit; }
   letter-spacing: .09em;
   text-transform: uppercase;
 }
+
+.ui-label.text-river { color: var(--color-river-ink); }
 
 .surface-panel {
   border: 1px solid rgba(9, 34, 53, .13);

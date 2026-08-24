@@ -39,7 +39,7 @@ defineProps<{ variant: ArticleVisualVariant; compact?: boolean }>()
 <style scoped>
 .article-visual { border-radius: 1.15rem; background: #092235; }
 .article-visual--reading { background: #dfeceb; }
-.article-visual--sources { background: #1f7978; }
+.article-visual--sources { background: #1c9eda; }
 .contour { position: absolute; border: 1px solid rgba(119, 190, 192, .28); border-radius: 48% 52% 58% 42%; transform: rotate(-13deg); }
 .contour-a { width: 78%; height: 94%; right: -13%; top: -34%; }
 .contour-b { width: 62%; height: 75%; right: -2%; top: -23%; }
