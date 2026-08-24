@@ -8,9 +8,10 @@ const items = [
   { to: '/novedades', label: 'Novedades', hint: 'Notas y explicaciones', icon: Newspaper },
 ]
 
+const normalizedPath = computed(() => route.path.replace(/\/+$/, '') || '/')
 const isActive = (to: string) => to === '/mapa'
-  ? route.path === '/mapa' || route.path === '/'
-  : route.path.startsWith(to)
+  ? normalizedPath.value === '/mapa' || normalizedPath.value === '/'
+  : normalizedPath.value.startsWith(to)
 </script>
 
 <template>

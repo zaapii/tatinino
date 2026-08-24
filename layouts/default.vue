@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
-const isMap = computed(() => route.path === '/mapa' || route.path === '/')
+const normalizedPath = computed(() => route.path.replace(/\/+$/, '') || '/')
+const isMap = computed(() => route.name === 'mapa' || normalizedPath.value === '/mapa' || normalizedPath.value === '/')
 </script>
 
 <template>
