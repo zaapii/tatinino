@@ -34,7 +34,7 @@ const indicators = [
       </div>
     </header>
 
-    <main>
+    <div>
       <section id="entender" class="px-6 py-16 sm:px-10 lg:px-14 lg:py-24">
         <div class="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[.65fr_1.35fr] lg:gap-24">
           <div><p class="ui-label text-river">Punto de partida</p><h2 class="waterline mt-3 text-3xl font-semibold tracking-[-.04em] sm:text-4xl">¿Qué es<br>El Niño?</h2></div>
@@ -67,7 +67,7 @@ const indicators = [
       </section>
 
       <ClimateSourcesPanel />
-    </main>
+    </div>
     <AppFooter />
   </div>
 </template>

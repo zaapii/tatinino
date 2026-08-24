@@ -2,6 +2,7 @@
 import { SlidersHorizontal, LockKeyhole, Radio } from 'lucide-vue-next'
 import type { MapPoint } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
+import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
 useSeoMeta({
   title: 'Mapa de cotas',
@@ -41,7 +42,7 @@ const waterVisible = computed(() => layers.value.find(layer => layer.id === 'wat
     <MapLayersControl v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
     <MapInformationPanel v-model="infoOpen" />
     <MapElevationLegend />
-    <MapPointInfo v-if="selectedPoint" :point="selectedPoint" @close="selectedPoint = null" />
+    <MapPointInfoPanel v-if="selectedPoint" :point="selectedPoint" @close="selectedPoint = null" />
 
     <section v-if="!selectedPoint" class="surface-panel absolute right-3 top-[164px] z-20 w-[230px] rounded-xl p-3 sm:bottom-[58px] sm:right-[62px] sm:top-auto sm:w-[310px] sm:p-3.5">
       <div class="flex items-center gap-2"><SlidersHorizontal :size="15" class="text-river"/><p class="text-[11px] font-semibold sm:text-xs">Visualizar terrenos debajo de una cota</p></div>

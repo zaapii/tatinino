@@ -17,7 +17,10 @@ export default defineNuxtConfig({
       rasterTilesBaseUrl: '',
     },
   },
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [tailwindcss()],
+    optimizeDeps: { exclude: ['maplibre-gl'] },
+  },
   app: {
     head: {
       htmlAttrs: { lang: 'es' },

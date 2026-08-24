@@ -6,7 +6,7 @@
         <p class="ui-label mt-2 text-river">Información pública para prevenir</p>
       </div>
       <div class="mt-8 lg:mt-0">
-        <nav class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium"><a href="#fuentes">Fuentes</a><a href="#metodologia">Metodología</a><a href="#proyecto">Acerca del proyecto</a><a href="mailto:contacto@ejemplo.gob.ar">Contacto</a></nav>
+        <nav class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium"><a href="#fuentes">Fuentes</a><a href="#metodologia">Metodología</a><a href="#proyecto">Acerca del proyecto</a><a href="#contacto">Contacto</a></nav>
         <p class="mt-6 max-w-3xl text-xs leading-relaxed text-ink/55">La información presentada tiene fines informativos y preventivos y no reemplaza las comunicaciones oficiales de los organismos de emergencia.</p>
       </div>
     </div>

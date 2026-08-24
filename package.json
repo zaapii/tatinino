@@ -24,6 +24,5 @@
     "tailwindcss": "latest",
     "typescript": "5.9.3",
     "vue-tsc": "latest"
-  },
-  "packageManager": "pnpm@10.14.0"
+  }
 }
