@@ -16,6 +16,18 @@ export type MapSelection = MapPoint & {
   feature?: MapFeatureInfo
 }
 
+export type CitizenReport = {
+  id: string
+  topic: string
+  description: string
+  point: MapPoint
+  createdAt: string
+  photoName?: string
+  status: 'reported'
+}
+
+export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'status'>
+
 export type LayerStatus = 'active' | 'available' | 'soon'
 export type LayerGroup = 'territory' | 'protection' | 'current' | 'community'
 
@@ -38,6 +50,7 @@ export type MapLayerDefinition = {
   status: LayerStatus
   group: LayerGroup
   source?: HydraulicLayerSource
+  color?: string
 }
 
 export type GeospatialSourceConfig = {

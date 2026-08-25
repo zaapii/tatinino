@@ -64,7 +64,7 @@ export function useMapLayers() {
     { id: 'river-levels', label: 'Niveles de los ríos', description: 'Mediciones y tendencias oficiales', enabled: false, status: 'soon', group: 'current' },
     { id: 'rainfall', label: 'Precipitaciones y pronósticos', description: 'Información meteorológica actualizada', enabled: false, status: 'soon', group: 'current' },
     { id: 'alerts', label: 'Alertas oficiales', description: 'Comunicados meteorológicos e hidrológicos', enabled: false, status: 'soon', group: 'current' },
-    { id: 'citizen-reports', label: 'Reportes de la comunidad', description: 'Puntos informados, validados y en seguimiento', enabled: false, status: 'soon', group: 'community' },
+    { id: 'citizen-reports', label: 'Reclamos (demo)', description: 'Puntos cargados por la comunidad durante esta sesión; todavía no se envían ni validan', enabled: true, status: 'available', group: 'community', color: '#d94841' },
   ])
 
   function toggleLayer(id: string) {

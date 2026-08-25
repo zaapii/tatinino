@@ -16,23 +16,7 @@ export function useMapConfig() {
     zoom: 11.6,
     minZoom: 8,
     maxZoom: 18,
-    baseStyle: {
-      version: 8 as const,
-      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-      sources: {
-        openstreetmap: {
-          type: 'raster' as const,
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors',
-        },
-      },
-      layers: [
-        { id: 'background', type: 'background' as const, paint: { 'background-color': '#dfe9e8' } },
-        { id: 'openstreetmap-base', type: 'raster' as const, source: 'openstreetmap', minzoom: 0, maxzoom: 19 },
-      ],
-    },
-    vectorStyleUrl: 'https://tiles.openfreemap.org/styles/positron',
+    baseStyle: 'https://tiles.openfreemap.org/styles/positron',
     externalSources,
   }
 }
