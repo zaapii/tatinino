@@ -24,6 +24,7 @@ const mapElement = ref<HTMLDivElement | null>(null)
 const loadingSources = new Set<string>()
 const baseLayerIds: string[] = []
 let map: MapLibreMap | undefined
+let resizeObserver: ResizeObserver | undefined
 
 const reportSourceId = 'citizen-reports'
 const reportHaloLayerId = 'citizen-reports-halo'
@@ -257,6 +258,24 @@ function updateReportVisibility(visible: boolean) {
   }
 }
 
+function updateHydraulicLayerVisibility(layerId: string) {
+  if (!map?.isStyleLoaded()) return
+  const definition = props.layers.find(layer => layer.id === layerId)
+  if (!definition) return
+
+  for (const styleId of styleIdsFor(layerId)) {
+    if (map.getLayer(styleId)) map.setLayoutProperty(styleId, 'visibility', definition.enabled ? 'visible' : 'none')
+  }
+}
+
+function refreshMapRendering() {
+  if (!map?.isStyleLoaded()) return
+  map.resize()
+  syncHydraulicLayers()
+  updateReportVisibility(props.reportsVisible)
+  map.triggerRepaint()
+}
+
 function syncHydraulicLayers() {
   if (!map?.isStyleLoaded()) return
 
@@ -362,6 +381,8 @@ onMounted(async () => {
       maxZoom: 12.15,
       duration: 0,
     })
+    requestAnimationFrame(() => requestAnimationFrame(refreshMapRendering))
+    map?.once('idle', refreshMapRendering)
     emit('ready')
   })
 
@@ -369,6 +390,8 @@ onMounted(async () => {
     if (!event.sourceId?.startsWith('hydraulic-') || !event.isSourceLoaded) return
     loadingSources.delete(event.sourceId)
     updateLoadingState()
+    updateHydraulicLayerVisibility(event.sourceId.replace('hydraulic-', ''))
+    map?.triggerRepaint()
   })
 
   map.on('error', event => {
@@ -400,9 +423,17 @@ onMounted(async () => {
       feature: feature ? featureInfo(feature) : undefined,
     })
   })
+
+  resizeObserver = new ResizeObserver(() => {
+    requestAnimationFrame(() => map?.resize())
+  })
+  resizeObserver.observe(mapElement.value)
 })
 
-onBeforeUnmount(() => map?.remove())
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  map?.remove()
+})
 </script>
 
 <template>
