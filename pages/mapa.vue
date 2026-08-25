@@ -44,6 +44,15 @@ function setReportLocation(point: MapPoint) {
   reportOpen.value = true
 }
 
+function startReportAtPoint(point: MapPoint) {
+  reportLocation.value = point
+  placingReport.value = false
+  layersOpen.value = false
+  infoOpen.value = false
+  selectedPoint.value = null
+  reportOpen.value = true
+}
+
 function cancelReportLocation() {
   placingReport.value = false
   reportOpen.value = true
@@ -100,7 +109,7 @@ function addReport(form: CitizenReportForm) {
     <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @submit="addReport" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
-    <MapPointInfoPanel v-if="selectedPoint && !placingReport" :point="selectedPoint" @close="selectedPoint = null" />
+    <MapPointInfoPanel v-if="selectedPoint && !placingReport" :point="selectedPoint" @close="selectedPoint = null" @report="startReportAtPoint" />
 
     <div v-if="placingReport" class="pointer-events-none absolute inset-x-3 top-[116px] z-40 flex justify-center sm:top-[124px]">
       <div class="surface-panel pointer-events-auto flex w-full max-w-[560px] items-center gap-3 rounded-2xl p-3 shadow-xl sm:p-3.5">

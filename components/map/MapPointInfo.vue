@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { MapPin, X, DraftingCompass, MessageSquareWarning, TriangleAlert } from 'lucide-vue-next'
-import type { MapSelection } from '~/types/map'
+import { MapPin, X, DraftingCompass, MessageSquarePlus, MessageSquareWarning, TriangleAlert } from 'lucide-vue-next'
+import type { MapPoint, MapSelection } from '~/types/map'
 
 const props = defineProps<{ point: MapSelection }>()
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{
+  close: []
+  report: [point: MapPoint]
+}>()
 const isCitizenReport = computed(() => props.point.feature?.layerId === 'citizen-reports')
 
 const geometryLabels: Record<string, string> = {
@@ -77,6 +80,10 @@ const detailRows = computed(() => {
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Latitud</p><p class="mt-1 font-mono text-xs">{{ point.latitude.toFixed(6) }}</p></div>
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Longitud</p><p class="mt-1 font-mono text-xs">{{ point.longitude.toFixed(6) }}</p></div>
     </div>
+
+    <button v-if="!isCitizenReport" class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#d94841] px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c93a34] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94841]" @click="emit('report', { latitude: point.latitude, longitude: point.longitude })">
+      <MessageSquarePlus :size="16"/> Cargar un reclamo en este punto
+    </button>
 
     <p class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isCitizenReport ? 'Fuente: carga demostrativa de esta sesión. No se almacena ni se transmite fuera de la maqueta.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>
