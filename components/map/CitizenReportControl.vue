@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Camera, CheckCircle2, LocateFixed, MapPin, MessageSquareWarning, Navigation, X } from 'lucide-vue-next'
-import type { CitizenReportForm, MapPoint } from '~/types/map'
+import { Building2, Camera, CheckCircle2, LoaderCircle, LocateFixed, MapPin, MessageSquareWarning, Navigation, X } from 'lucide-vue-next'
+import type { CitizenReport, CitizenReportForm, MapPoint } from '~/types/map'
 
 const props = defineProps<{
   location: MapPoint | null
@@ -10,15 +10,24 @@ const props = defineProps<{
 const emit = defineEmits<{
   requestLocation: []
   cancelLocation: []
-  submit: [report: CitizenReportForm]
+  created: [report: CitizenReport]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const topic = ref('')
 const description = ref('')
+const neighborhood = ref('')
 const photoName = ref('')
+const photoFile = ref<File | null>(null)
 const photoPreview = ref('')
 const submitted = ref(false)
+const saving = ref(false)
+const submitError = ref('')
+const { createReport } = useCitizenReports()
+const { lookupNeighborhood } = useNeighborhoodLookup()
+const resolvingNeighborhood = ref(false)
+const neighborhoodHint = ref('')
+let neighborhoodRequestId = 0
 
 const reportTypes = [
   'Boca de tormenta obstruida',
@@ -31,28 +40,81 @@ const reportTypes = [
 
 const canSubmit = computed(() => Boolean(topic.value && description.value.trim().length >= 10 && props.location))
 
+watch(
+  () => props.location ? `${props.location.latitude}:${props.location.longitude}` : '',
+  async () => {
+    const requestId = ++neighborhoodRequestId
+    neighborhood.value = ''
+    neighborhoodHint.value = ''
+    if (!props.location) return
+
+    resolvingNeighborhood.value = true
+    try {
+      const result = await lookupNeighborhood(props.location)
+      if (requestId !== neighborhoodRequestId) return
+      neighborhood.value = result ?? ''
+      neighborhoodHint.value = result
+        ? 'Estimado por OpenStreetMap. Podés corregirlo si es necesario.'
+        : 'No encontramos el barrio automáticamente. Podés escribirlo.'
+    }
+    catch {
+      if (requestId === neighborhoodRequestId) neighborhoodHint.value = 'No pudimos estimarlo. Podés escribir el barrio manualmente.'
+    }
+    finally {
+      if (requestId === neighborhoodRequestId) resolvingNeighborhood.value = false
+    }
+  },
+  { immediate: true },
+)
+
 function choosePhoto(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
+  submitError.value = ''
+  if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(file.type)) {
+    submitError.value = 'La foto debe ser JPG, PNG, WebP, HEIC o HEIF.'
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    submitError.value = 'La foto no puede superar los 5 MB.'
+    return
+  }
   if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+  photoFile.value = file
   photoName.value = file.name
   photoPreview.value = URL.createObjectURL(file)
 }
 
-function submitReport() {
-  if (!canSubmit.value || !props.location) return
-  emit('submit', {
-    topic: topic.value,
-    description: description.value.trim(),
-    photoName: photoName.value || undefined,
-    point: props.location,
-  })
-  submitted.value = true
-  topic.value = ''
-  description.value = ''
-  photoName.value = ''
-  if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
-  photoPreview.value = ''
+async function submitReport() {
+  if (!canSubmit.value || !props.location || saving.value) return
+  saving.value = true
+  submitError.value = ''
+
+  try {
+    const report = await createReport({
+      topic: topic.value,
+      description: description.value.trim(),
+      neighborhood: neighborhood.value.trim() || undefined,
+      photoName: photoName.value || undefined,
+      photoFile: photoFile.value ?? undefined,
+      point: props.location,
+    } satisfies CitizenReportForm)
+    emit('created', report)
+    submitted.value = true
+    topic.value = ''
+    description.value = ''
+    neighborhood.value = ''
+    photoName.value = ''
+    photoFile.value = null
+    if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+    photoPreview.value = ''
+  }
+  catch (error) {
+    submitError.value = error instanceof Error ? error.message : 'No se pudo guardar el reclamo.'
+  }
+  finally {
+    saving.value = false
+  }
 }
 
 function startAnother() {
@@ -78,14 +140,14 @@ onBeforeUnmount(() => {
         </header>
 
         <div class="mt-3 flex items-start gap-2 rounded-xl bg-[#d94841]/8 px-3 py-2.5 text-[10px] leading-relaxed text-ink/58">
-          <span class="ui-label mt-0.5 shrink-0 rounded-full bg-[#d94841] px-2 py-0.5 text-[8px] text-white">Demo</span>
-          Esta carga solo funciona dentro de la maqueta: no se envía al Municipio ni queda guardada al salir.
+          <span class="ui-label mt-0.5 shrink-0 rounded-full bg-[#d94841] px-2 py-0.5 text-[8px] text-white">Público</span>
+          El reclamo queda guardado y visible en el mapa como información sin verificar. No incluyas datos personales.
         </div>
 
         <div v-if="submitted" class="py-7 text-center">
           <span class="mx-auto grid size-12 place-items-center rounded-full bg-[#d94841]/10 text-[#d94841]"><CheckCircle2 :size="25"/></span>
-          <h3 class="mt-4 text-base font-semibold">Reclamo agregado al mapa</h3>
-          <p class="mx-auto mt-2 max-w-[270px] text-xs leading-relaxed text-ink/55">Ya aparece como un punto rojo en la capa “Reclamos (demo)”.</p>
+          <h3 class="mt-4 text-base font-semibold">Reclamo guardado</h3>
+          <p class="mx-auto mt-2 max-w-[270px] text-xs leading-relaxed text-ink/55">Ya aparece como un punto rojo en la capa “Reclamos ciudadanos”, con estado sin verificar.</p>
           <button class="mt-5 rounded-xl border border-ink/12 px-4 py-2.5 text-xs font-semibold transition hover:bg-mist" @click="startAnother">Cargar otro reclamo</button>
         </div>
 
@@ -111,7 +173,7 @@ onBeforeUnmount(() => {
                 <img v-if="photoPreview" :src="photoPreview" class="h-full w-full object-cover" alt="Vista previa de la foto"/>
                 <Camera v-else :size="17"/>
               </span>
-              <span class="min-w-0"><span class="block truncate text-xs font-semibold">{{ photoName || 'Adjuntar una foto' }}</span><span class="mt-0.5 block text-[10px] text-ink/42">Se conserva solo en este dispositivo</span></span>
+              <span class="min-w-0"><span class="block truncate text-xs font-semibold">{{ photoName || 'Adjuntar una foto' }}</span><span class="mt-0.5 block text-[10px] text-ink/42">JPG, PNG, WebP, HEIC o HEIF · máximo 5 MB</span></span>
               <input type="file" accept="image/*" class="sr-only" @change="choosePhoto">
             </label>
           </div>
@@ -126,7 +188,17 @@ onBeforeUnmount(() => {
             <button v-else type="button" class="mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border border-river/25 bg-river/6 px-4 py-3 text-xs font-semibold text-river transition hover:bg-river/10" @click="emit('requestLocation')"><LocateFixed :size="17"/> Marcar en el mapa</button>
           </div>
 
-          <button type="submit" :disabled="!canSubmit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#d94841] px-4 py-3.5 text-xs font-semibold text-white transition hover:bg-[#c93a34] disabled:cursor-not-allowed disabled:bg-ink/12 disabled:text-ink/35"><Navigation :size="16"/> Agregar reclamo al mapa</button>
+          <label v-if="location" class="block">
+            <span class="ui-label flex items-center gap-1.5 text-[9px] text-ink/50"><Building2 :size="13" class="text-river"/> Barrio</span>
+            <div class="relative mt-1.5">
+              <input v-model.trim="neighborhood" maxlength="120" :placeholder="resolvingNeighborhood ? 'Buscando barrio…' : 'Escribí el barrio si lo conocés'" :disabled="resolvingNeighborhood" class="w-full rounded-xl border border-ink/14 bg-white px-3 py-3 text-xs outline-none transition placeholder:text-ink/32 focus:border-river focus:ring-2 focus:ring-river/12 disabled:bg-mist disabled:text-ink/45">
+              <LoaderCircle v-if="resolvingNeighborhood" :size="15" class="absolute right-3 top-3 animate-spin text-river"/>
+            </div>
+            <span v-if="neighborhoodHint" class="mt-1.5 block text-[9px] leading-relaxed text-ink/42">{{ neighborhoodHint }}</span>
+          </label>
+
+          <p v-if="submitError" role="alert" class="rounded-xl bg-[#d94841]/8 px-3 py-2.5 text-[11px] leading-relaxed text-[#a62e29]">{{ submitError }}</p>
+          <button type="submit" :disabled="!canSubmit || saving" class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#d94841] px-4 py-3.5 text-xs font-semibold text-white transition hover:bg-[#c93a34] disabled:cursor-not-allowed disabled:bg-ink/12 disabled:text-ink/35"><Navigation :size="16" :class="saving ? 'animate-pulse' : ''"/> {{ saving ? 'Guardando reclamo…' : 'Guardar reclamo en el mapa' }}</button>
         </form>
       </section>
     </Transition>

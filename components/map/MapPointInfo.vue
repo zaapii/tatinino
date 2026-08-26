@@ -29,15 +29,17 @@ const propertyLabels: Record<string, string> = {
   radius_m_drawing_units: 'Radio en plano',
   topic: 'Tema',
   description: 'Descripción',
+  neighborhood: 'Barrio',
   createdAt: 'Carga',
   statusLabel: 'Estado',
   photoName: 'Foto',
+  photoUrl: 'Imagen',
 }
 
 const detailRows = computed(() => {
   if (!props.point.feature) return []
   const preferredKeys = isCitizenReport.value
-    ? ['description', 'createdAt', 'statusLabel', 'photoName']
+    ? ['neighborhood', 'description', 'createdAt', 'statusLabel', 'photoName']
     : ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
   return preferredKeys
     .filter(key => props.point.feature?.properties[key] !== undefined && props.point.feature?.properties[key] !== null && props.point.feature?.properties[key] !== '')
@@ -59,7 +61,7 @@ const detailRows = computed(() => {
       <div class="flex items-center gap-3 rounded-xl p-3.5 text-white" :style="{ backgroundColor: point.feature.color }">
         <MessageSquareWarning v-if="isCitizenReport" :size="18" class="shrink-0"/>
         <DraftingCompass v-else :size="18" class="shrink-0"/>
-        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Demostración' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isCitizenReport ? 'Punto informado · Sin validación oficial' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
+        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Registro público' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isCitizenReport ? 'Punto informado · Sin validación oficial' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
       </div>
 
       <dl v-if="detailRows.length" class="mt-3 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
@@ -71,7 +73,11 @@ const detailRows = computed(() => {
 
       <p v-if="point.feature.layerId === 'conduit-elevations'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Es una cota de fondo de conducto inferida por el prefijo FC del plano. No representa la altura de la calle ni del terreno.</p>
       <p v-else-if="point.feature.layerId === 'elevation'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> El significado y la unidad de esta anotación no están clasificados. Se conserva únicamente para revisar el plano original.</p>
-      <p v-else-if="isCitizenReport" class="mt-3 flex gap-2 rounded-xl bg-[#d94841]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#b9312b]"/> Este punto es parte de la maqueta. No implica que el reclamo haya sido recibido, verificado o resuelto por un organismo oficial.</p>
+      <p v-else-if="isCitizenReport" class="mt-3 flex gap-2 rounded-xl bg-[#d94841]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#b9312b]"/> Este punto fue cargado por la comunidad. Su publicación no implica que haya sido verificado o resuelto por un organismo oficial.</p>
+      <a v-if="isCitizenReport && point.feature.properties.photoUrl" :href="String(point.feature.properties.photoUrl)" target="_blank" rel="noopener noreferrer" class="mt-3 block overflow-hidden rounded-xl border border-ink/10 bg-mist">
+        <img :src="String(point.feature.properties.photoUrl)" :alt="`Foto del reclamo: ${point.feature.layerLabel}`" class="max-h-44 w-full object-cover"/>
+        <span class="block px-3 py-2 text-[10px] font-semibold text-river">Abrir foto completa</span>
+      </a>
     </div>
 
     <div v-else class="mt-4 flex items-start gap-3 rounded-xl bg-mist p-3.5"><MapPin :size="18" class="mt-0.5 shrink-0 text-river"/><div><p class="text-xs font-semibold">Sin elemento técnico seleccionado</p><p class="mt-1 text-xs leading-relaxed text-ink/57">Activá una capa o acercate al mapa para consultar su información.</p></div></div>
@@ -85,6 +91,6 @@ const detailRows = computed(() => {
       <MessageSquarePlus :size="16"/> Cargar un reclamo en este punto
     </button>
 
-    <p class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isCitizenReport ? 'Fuente: carga demostrativa de esta sesión. No se almacena ni se transmite fuera de la maqueta.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
+    <p class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isCitizenReport ? 'Fuente: registro público de reclamos ciudadanos. El punto se muestra sin validación oficial hasta que su estado indique lo contrario.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>
 </template>

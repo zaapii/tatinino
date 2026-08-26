@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
+import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
 import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection } from '~/types/map'
 
 const emit = defineEmits<{
@@ -32,6 +32,176 @@ const reportPointLayerId = 'citizen-reports-point'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
 const draftPointLayerId = 'citizen-report-draft-point'
+
+const reportStatusLabels: Record<CitizenReport['status'], string> = {
+  reported: 'Reportado · sin verificar',
+  verified: 'Verificado',
+  in_progress: 'En intervención',
+  resolved: 'Resuelto',
+  dismissed: 'Descartado',
+}
+
+type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'other'
+
+const reportIcons: Array<{ id: string, topic: string, kind: ReportIconKind }> = [
+  { id: 'report-marker-storm-drain', topic: 'Boca de tormenta obstruida', kind: 'storm-drain' },
+  { id: 'report-marker-waste', topic: 'Basura o residuos', kind: 'waste' },
+  { id: 'report-marker-flooded-street', topic: 'Calle anegada', kind: 'flooded-street' },
+  { id: 'report-marker-drainage', topic: 'Canal o desagüe', kind: 'drainage' },
+  { id: 'report-marker-defense', topic: 'Defensa o terraplén', kind: 'defense' },
+  { id: 'report-marker-other', topic: 'Otro', kind: 'other' },
+]
+
+function drawWave(context: CanvasRenderingContext2D, y: number) {
+  context.beginPath()
+  context.moveTo(15, y)
+  context.bezierCurveTo(18, y - 2.5, 20, y + 2.5, 23, y)
+  context.bezierCurveTo(26, y - 2.5, 28, y + 2.5, 31, y)
+  context.stroke()
+}
+
+function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind) {
+  context.strokeStyle = '#9f302d'
+  context.fillStyle = '#9f302d'
+  context.lineWidth = 2
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+
+  if (kind === 'storm-drain') {
+    context.strokeRect(15, 15, 16, 13)
+    for (const x of [19, 23, 27]) {
+      context.beginPath()
+      context.moveTo(x, 17)
+      context.lineTo(x, 26)
+      context.stroke()
+    }
+    return
+  }
+
+  if (kind === 'waste') {
+    context.strokeRect(17, 17, 12, 12)
+    context.beginPath()
+    context.moveTo(15, 16)
+    context.lineTo(31, 16)
+    context.moveTo(20, 13.5)
+    context.lineTo(26, 13.5)
+    context.moveTo(20, 20)
+    context.lineTo(20, 26)
+    context.moveTo(26, 20)
+    context.lineTo(26, 26)
+    context.stroke()
+    return
+  }
+
+  if (kind === 'flooded-street') {
+    drawWave(context, 18)
+    drawWave(context, 23)
+    drawWave(context, 28)
+    return
+  }
+
+  if (kind === 'drainage') {
+    context.beginPath()
+    context.moveTo(23, 13)
+    context.lineTo(23, 29)
+    context.moveTo(23, 20)
+    context.lineTo(16, 16)
+    context.moveTo(23, 23)
+    context.lineTo(30, 19)
+    context.stroke()
+    context.beginPath()
+    context.moveTo(20, 27)
+    context.lineTo(23, 30)
+    context.lineTo(26, 27)
+    context.stroke()
+    return
+  }
+
+  if (kind === 'defense') {
+    context.beginPath()
+    context.moveTo(14, 29)
+    context.lineTo(23, 14)
+    context.lineTo(32, 29)
+    context.closePath()
+    context.stroke()
+    context.beginPath()
+    context.moveTo(18, 25)
+    context.lineTo(28, 25)
+    context.moveTo(20, 21)
+    context.lineTo(26, 21)
+    context.stroke()
+    return
+  }
+
+  context.beginPath()
+  context.moveTo(23, 15)
+  context.lineTo(23, 24)
+  context.stroke()
+  context.beginPath()
+  context.arc(23, 29, 1.25, 0, Math.PI * 2)
+  context.fill()
+}
+
+function createReportIcon(kind: ReportIconKind) {
+  const pixelRatio = 2
+  const width = 46
+  const height = 54
+  const canvas = document.createElement('canvas')
+  canvas.width = width * pixelRatio
+  canvas.height = height * pixelRatio
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('No se pudo crear el marcador de reclamo.')
+  context.scale(pixelRatio, pixelRatio)
+
+  context.shadowColor = 'rgba(9, 34, 53, .25)'
+  context.shadowBlur = 4
+  context.shadowOffsetY = 2
+  context.fillStyle = '#ffffff'
+  context.beginPath()
+  context.arc(23, 22, 21, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.moveTo(11, 37)
+  context.lineTo(23, 53)
+  context.lineTo(35, 37)
+  context.closePath()
+  context.fill()
+
+  context.shadowColor = 'transparent'
+  context.fillStyle = '#d94841'
+  context.beginPath()
+  context.arc(23, 22, 18, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.moveTo(13, 35)
+  context.lineTo(23, 49)
+  context.lineTo(33, 35)
+  context.closePath()
+  context.fill()
+
+  context.fillStyle = '#ffffff'
+  context.beginPath()
+  context.arc(23, 22, 13.5, 0, Math.PI * 2)
+  context.fill()
+  drawReportGlyph(context, kind)
+
+  return { image: context.getImageData(0, 0, canvas.width, canvas.height), pixelRatio }
+}
+
+function addReportIcons() {
+  if (!map) return
+  for (const definition of reportIcons) {
+    if (map.hasImage(definition.id)) continue
+    const { image, pixelRatio } = createReportIcon(definition.kind)
+    map.addImage(definition.id, image, { pixelRatio })
+  }
+}
+
+const reportIconExpression = [
+  'match', ['get', 'topic'],
+  ...reportIcons.flatMap(definition => [definition.topic, definition.id]),
+  'report-marker-other',
+] as unknown as ExpressionSpecification
 
 const sourceIdFor = (id: string) => `hydraulic-${id}`
 const styleIdsFor = (id: string): [string, string, string, string] => [
@@ -173,9 +343,11 @@ function reportGeoJson() {
         id: report.id,
         topic: report.topic,
         description: report.description,
+        neighborhood: report.neighborhood ?? '',
         createdAt: report.createdAt,
-        statusLabel: 'Reportado · sin verificar',
+        statusLabel: reportStatusLabels[report.status],
         photoName: report.photoName ?? '',
+        photoUrl: report.photoUrl ?? '',
       },
     })),
   }
@@ -196,7 +368,9 @@ function draftGeoJson() {
 
 function addCitizenReportLayers() {
   if (!map) return
+  addReportIcons()
   if (!map.getSource(reportSourceId)) map.addSource(reportSourceId, { type: 'geojson', data: reportGeoJson() })
+  else updateReportData()
 
   if (!map.getLayer(reportHaloLayerId)) {
     map.addLayer({
@@ -204,20 +378,27 @@ function addCitizenReportLayers() {
       source: reportSourceId,
       type: 'circle',
       layout: { visibility: props.reportsVisible ? 'visible' : 'none' },
-      paint: { 'circle-radius': 12, 'circle-color': '#d94841', 'circle-opacity': 0.18, 'circle-blur': 0.15 },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 16, 16, 23],
+        'circle-color': '#d94841',
+        'circle-opacity': 0.2,
+        'circle-blur': 0.35,
+      },
     })
   }
   if (!map.getLayer(reportPointLayerId)) {
     map.addLayer({
       id: reportPointLayerId,
       source: reportSourceId,
-      type: 'circle',
-      layout: { visibility: props.reportsVisible ? 'visible' : 'none' },
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 16, 8],
-        'circle-color': '#d94841',
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 2.2,
+      type: 'symbol',
+      layout: {
+        visibility: props.reportsVisible ? 'visible' : 'none',
+        'icon-image': reportIconExpression,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.72, 13, 0.86, 17, 1],
+        'icon-anchor': 'bottom',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-padding': 2,
       },
     })
   }
@@ -242,12 +423,12 @@ function addCitizenReportLayers() {
 }
 
 function updateReportData() {
-  if (!map?.isStyleLoaded()) return
+  if (!map) return
   ;(map.getSource(reportSourceId) as GeoJSONSource | undefined)?.setData(reportGeoJson())
 }
 
 function updateDraftData() {
-  if (!map?.isStyleLoaded()) return
+  if (!map) return
   ;(map.getSource(draftSourceId) as GeoJSONSource | undefined)?.setData(draftGeoJson())
 }
 
@@ -272,6 +453,8 @@ function refreshMapRendering() {
   if (!map?.isStyleLoaded()) return
   map.resize()
   syncHydraulicLayers()
+  updateReportData()
+  updateDraftData()
   updateReportVisibility(props.reportsVisible)
   map.triggerRepaint()
 }
@@ -324,7 +507,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
       layerLabel: String(properties.topic ?? 'Reclamo ciudadano'),
       color: '#d94841',
       geometryType: feature.geometry.type,
-      sourceFile: 'Sesión de demostración',
+      sourceFile: 'Registro público de reclamos ciudadanos',
       properties,
     }
   }

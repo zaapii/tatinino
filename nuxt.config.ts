@@ -10,11 +10,17 @@ export default defineNuxtConfig({
     '~/assets/css/main.css',
   ],
   modules: ['@vueuse/nuxt'],
+  routeRules: {
+    '/admin': { ssr: false },
+    '/admin/**': { ssr: false },
+  },
   runtimeConfig: {
     public: {
       geojsonBaseUrl: '',
       pmtilesBaseUrl: '',
       rasterTilesBaseUrl: '',
+      supabaseUrl: 'https://spjrxnkompyyjbztzzlo.supabase.co',
+      supabasePublishableKey: 'sb_publishable_xp0Kt1YLcjrmAJWEZ6MYFg_tRov9YF8',
     },
   },
   vite: {

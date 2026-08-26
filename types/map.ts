@@ -20,13 +20,19 @@ export type CitizenReport = {
   id: string
   topic: string
   description: string
+  neighborhood?: string
   point: MapPoint
   createdAt: string
   photoName?: string
-  status: 'reported'
+  photoUrl?: string
+  status: CitizenReportStatus
 }
 
-export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'status'>
+export type CitizenReportStatus = 'reported' | 'verified' | 'in_progress' | 'resolved' | 'dismissed'
+
+export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'photoUrl' | 'status'> & {
+  photoFile?: File
+}
 
 export type LayerStatus = 'active' | 'available' | 'soon'
 export type LayerGroup = 'territory' | 'protection' | 'current' | 'community'

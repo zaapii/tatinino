@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { CircleAlert, Crosshair, Database, LoaderCircle, Radio, X } from 'lucide-vue-next'
-import type { CitizenReport, CitizenReportForm, MapPoint, MapSelection } from '~/types/map'
+import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, X } from 'lucide-vue-next'
+import type { CitizenReport, MapPoint, MapSelection } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
@@ -17,13 +17,13 @@ const infoOpen = ref(false)
 const mapReady = ref(false)
 const loadingLayerCount = ref(0)
 const layerError = ref('')
+const reportsError = ref('')
+const reportsLoading = ref(true)
 const placingReport = ref(false)
 const reportLocation = ref<MapPoint | null>(null)
-const reports = ref<CitizenReport[]>([
-  { id: 'demo-1', topic: 'Boca de tormenta obstruida', description: 'La boca está cubierta por hojas y residuos después de la última lluvia.', point: { longitude: -60.7114, latitude: -31.6361 }, createdAt: 'Hoy · 09:20', status: 'reported' },
-  { id: 'demo-2', topic: 'Calle anegada', description: 'Se acumula agua sobre la calzada y dificulta el paso peatonal.', point: { longitude: -60.6952, latitude: -31.6465 }, createdAt: 'Ayer · 18:45', status: 'reported' },
-  { id: 'demo-3', topic: 'Basura o residuos', description: 'Hay residuos acumulados junto al canal que podrían impedir el escurrimiento.', point: { longitude: -60.7248, latitude: -31.6218 }, createdAt: 'Ayer · 11:10', status: 'reported' },
-])
+const reports = ref<CitizenReport[]>([])
+const { fetchReports, subscribeToReports } = useCitizenReports()
+let stopReportSubscription: (() => void) | undefined
 const waterVisible = computed(() => layers.value.find(layer => layer.id === 'water')?.enabled ?? true)
 const reportsVisible = computed(() => layers.value.find(layer => layer.id === 'citizen-reports')?.enabled ?? true)
 
@@ -58,17 +58,34 @@ function cancelReportLocation() {
   reportOpen.value = true
 }
 
-function addReport(form: CitizenReportForm) {
-  reports.value.push({
-    ...form,
-    id: `demo-${Date.now()}`,
-    createdAt: 'Recién agregado',
-    status: 'reported',
-  })
+function upsertReport(report: CitizenReport) {
+  const index = reports.value.findIndex(item => item.id === report.id)
+  if (index === -1) reports.value.unshift(report)
+  else reports.value[index] = report
+}
+
+function addReport(report: CitizenReport) {
+  upsertReport(report)
   const reportLayer = layers.value.find(layer => layer.id === 'citizen-reports')
   if (reportLayer) reportLayer.enabled = true
   reportLocation.value = null
 }
+
+onMounted(async () => {
+  try {
+    stopReportSubscription = subscribeToReports(upsertReport)
+    const storedReports = await fetchReports()
+    for (const report of storedReports.reverse()) upsertReport(report)
+  }
+  catch (error) {
+    reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.'
+  }
+  finally {
+    reportsLoading.value = false
+  }
+})
+
+onBeforeUnmount(() => stopReportSubscription?.())
 </script>
 
 <template>
@@ -106,7 +123,7 @@ function addReport(form: CitizenReportForm) {
     </header>
 
     <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
-    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @submit="addReport" />
+    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @created="addReport" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
     <MapPointInfoPanel v-if="selectedPoint && !placingReport" :point="selectedPoint" @close="selectedPoint = null" @report="startReportAtPoint" />
@@ -120,6 +137,8 @@ function addReport(form: CitizenReportForm) {
     </div>
 
     <div v-if="loadingLayerCount" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><LoaderCircle :size="14" class="animate-spin text-river"/> Cargando {{ loadingLayerCount === 1 ? 'capa' : `${loadingLayerCount} capas` }}…</div>
+    <div v-else-if="reportsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Cloud :size="14" class="animate-pulse text-river"/> Sincronizando reclamos…</div>
+    <div v-else-if="reportsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ reportsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="reportsError = ''"><X :size="13"/></button></div>
     <div v-else-if="layerError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ layerError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="layerError = ''"><X :size="13"/></button></div>
 
     <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>

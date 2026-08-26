@@ -12,6 +12,8 @@
   "dependencies": {
     "@fontsource-variable/instrument-sans": "latest",
     "@fontsource/ibm-plex-mono": "latest",
+    "@supabase/supabase-js": "^2.112.4",
+    "echarts": "^6.1.0",
     "lucide-vue-next": "latest",
     "maplibre-gl": "latest",
     "nuxt": "^4.0.0",
