@@ -115,6 +115,7 @@ const topicDistribution = computed(() => {
 })
 
 type HeatmapTooltipParam = { value: [number, number, number] }
+type HeatmapLabelParam = { value: [number, number, number] }
 
 const matrixNeighborhoods = computed(() => {
   const counts = countBy(reports.value, neighborhoodOf)
@@ -134,6 +135,8 @@ const matrixData = computed(() => {
     cells.get(`${neighborhood}\u0000${topic}`) ?? 0,
   ])))
 })
+
+const matrixMaximum = computed(() => Math.max(1, ...matrixData.value.map(cell => cell[2] as number)))
 
 const emptyGraphic = (message: string) => ({
   type: 'text',
@@ -179,7 +182,7 @@ const matrixOption = computed<Record<string, unknown>>(() => ({
   },
   visualMap: {
     min: 0,
-    max: Math.max(1, ...matrixData.value.map(cell => cell[2] as number)),
+    max: matrixMaximum.value,
     show: false,
     inRange: { color: ['#edf4f3', '#bce7f7', '#56b8e3', '#1c9eda', '#0877ad'] },
   },
@@ -187,7 +190,20 @@ const matrixOption = computed<Record<string, unknown>>(() => ({
     name: 'Reclamos',
     type: 'heatmap',
     data: matrixData.value,
-    label: { show: true, color: '#092235', fontSize: 11, formatter: '{@[2]}' },
+    label: {
+      show: true,
+      fontSize: 11,
+      formatter: (params: HeatmapLabelParam) => {
+        const value = params.value[2]
+        return value > 0 && value / matrixMaximum.value >= 0.45
+          ? `{onBlue|${value}}`
+          : `{onLight|${value}}`
+      },
+      rich: {
+        onBlue: { color: '#ffffff', fontWeight: 700 },
+        onLight: { color: '#092235', fontWeight: 500 },
+      },
+    },
     itemStyle: { borderColor: '#fff', borderWidth: 3, borderRadius: 6 },
     emphasis: { itemStyle: { shadowBlur: 12, shadowColor: 'rgba(9,34,53,.18)' } },
   }] : [],
