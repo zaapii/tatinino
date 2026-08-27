@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import {
   Activity,
+  Ban,
+  Check,
   CheckCircle2,
   ChevronDown,
   CircleDot,
   Download,
+  Eye,
   FilterX,
+  ImageIcon,
   LoaderCircle,
   MapPin,
   Radio,
   RefreshCw,
   TriangleAlert,
+  X,
 } from 'lucide-vue-next'
 import type { AdminChartSelection, AdminCitizenReport } from '~/types/admin'
 import type { CitizenReportStatus } from '~/types/map'
@@ -37,18 +42,14 @@ const TOPIC_COLORS: Record<string, string> = {
   'Otro': '#8da2ae',
 }
 const STATUS_LABELS: Record<CitizenReportStatus, string> = {
-  reported: 'Reportado',
-  verified: 'Verificado',
-  in_progress: 'En gestión',
-  resolved: 'Resuelto',
-  dismissed: 'Descartado',
+  pending: 'Pendiente',
+  approved: 'Aprobado',
+  rejected: 'Rechazado',
 }
 const STATUS_CLASSES: Record<CitizenReportStatus, string> = {
-  reported: 'bg-amber-50 text-amber-700 ring-amber-200',
-  verified: 'bg-sky-50 text-sky-700 ring-sky-200',
-  in_progress: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-  resolved: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  dismissed: 'bg-slate-100 text-slate-600 ring-slate-200',
+  pending: 'bg-amber-50 text-amber-700 ring-amber-200',
+  approved: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  rejected: 'bg-red-50 text-red-700 ring-red-200',
 }
 
 const reports = ref<AdminCitizenReport[]>([])
@@ -57,8 +58,13 @@ const refreshing = ref(false)
 const loadError = ref('')
 const selectedNeighborhood = ref(ALL)
 const selectedTopic = ref(ALL)
+const selectedStatus = ref<typeof ALL | CitizenReportStatus>(ALL)
 const lastUpdated = ref<Date | null>(null)
-const { fetchAdminReports, subscribeToAdminReports } = useAdminReports()
+const selectedReport = ref<AdminCitizenReport | null>(null)
+const moderatingId = ref('')
+const actionError = ref('')
+const actionNotice = ref('')
+const { fetchAdminReports, moderateReport, subscribeToAdminReports } = useAdminReports()
 let unsubscribe: (() => void) | undefined
 
 const neighborhoodOf = (report: AdminCitizenReport) => report.neighborhood?.trim() || WITHOUT_NEIGHBORHOOD
@@ -72,28 +78,25 @@ const neighborhoodOptions = computed(() => [...new Set(reports.value.map(neighbo
 const filteredReports = computed(() => reports.value.filter(report => (
   (selectedNeighborhood.value === ALL || neighborhoodOf(report) === selectedNeighborhood.value)
   && (selectedTopic.value === ALL || report.topic === selectedTopic.value)
+  && (selectedStatus.value === ALL || report.status === selectedStatus.value)
 )))
 
-const activeFilterCount = computed(() => Number(selectedNeighborhood.value !== ALL) + Number(selectedTopic.value !== ALL))
-const pendingReports = computed(() => filteredReports.value.filter(report => !['resolved', 'dismissed'].includes(report.status)).length)
-const resolvedReports = computed(() => filteredReports.value.filter(report => report.status === 'resolved').length)
-const reportsLast7Days = computed(() => {
-  const threshold = Date.now() - 7 * 24 * 60 * 60 * 1000
-  return filteredReports.value.filter(report => new Date(report.createdAt).getTime() >= threshold).length
-})
-const visibleNeighborhoods = computed(() => new Set(filteredReports.value.map(neighborhoodOf)).size)
-const latestReports = computed(() => filteredReports.value.slice(0, 8))
+const activeFilterCount = computed(() => (
+  Number(selectedNeighborhood.value !== ALL)
+  + Number(selectedTopic.value !== ALL)
+  + Number(selectedStatus.value !== ALL)
+))
+const pendingReports = computed(() => reports.value.filter(report => report.status === 'pending').length)
+const approvedReports = computed(() => reports.value.filter(report => report.status === 'approved').length)
+const rejectedReports = computed(() => reports.value.filter(report => report.status === 'rejected').length)
 
 const numberFormatter = new Intl.NumberFormat('es-AR')
 const dateFormatter = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 const timeFormatter = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' })
 
-const topicScopedReports = computed(() => reports.value.filter(report => (
-  selectedTopic.value === ALL || report.topic === selectedTopic.value
-)))
 const neighborhoodScopedReports = computed(() => reports.value.filter(report => (
   selectedNeighborhood.value === ALL || neighborhoodOf(report) === selectedNeighborhood.value
-)))
+)).filter(report => selectedStatus.value === ALL || report.status === selectedStatus.value))
 
 function countBy<T>(items: T[], keyFor: (item: T) => string) {
   return items.reduce<Record<string, number>>((counts, item) => {
@@ -102,11 +105,6 @@ function countBy<T>(items: T[], keyFor: (item: T) => string) {
     return counts
   }, {})
 }
-
-const neighborhoodRanking = computed(() => {
-  const counts = countBy(topicScopedReports.value, neighborhoodOf)
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12)
-})
 
 const topicDistribution = computed(() => {
   const counts = countBy(neighborhoodScopedReports.value, report => report.topic)
@@ -118,13 +116,14 @@ type HeatmapTooltipParam = { value: [number, number, number] }
 type HeatmapLabelParam = { value: [number, number, number] }
 
 const matrixNeighborhoods = computed(() => {
-  const counts = countBy(reports.value, neighborhoodOf)
+  const scopedReports = reports.value.filter(report => selectedStatus.value === ALL || report.status === selectedStatus.value)
+  const counts = countBy(scopedReports, neighborhoodOf)
   return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name]) => name)
 })
 
 const matrixData = computed(() => {
   const cells = new Map<string, number>()
-  for (const report of reports.value) {
+  for (const report of reports.value.filter(report => selectedStatus.value === ALL || report.status === selectedStatus.value)) {
     const key = `${neighborhoodOf(report)}\u0000${report.topic}`
     cells.set(key, (cells.get(key) ?? 0) + 1)
   }
@@ -210,28 +209,6 @@ const matrixOption = computed<Record<string, unknown>>(() => ({
   graphic: matrixData.value.length ? [] : [emptyGraphic('Todavía no hay reclamos para comparar')],
 }))
 
-const neighborhoodOption = computed<Record<string, unknown>>(() => {
-  const entries = [...neighborhoodRanking.value].reverse()
-  return {
-    animationDuration: 500,
-    aria: { enabled: true, description: 'Cantidad de reclamos por barrio.' },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value: number) => `${value} reclamos` },
-    grid: { left: 138, right: 26, top: 8, bottom: 26 },
-    xAxis: { type: 'value', minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#e8eef0' } }, axisLabel: { color: '#78909c' } },
-    yAxis: { type: 'category', data: entries.map(([name]) => name), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#294756', fontSize: 11, width: 120, overflow: 'truncate' } },
-    series: entries.length ? [{
-      name: 'Reclamos',
-      type: 'bar',
-      data: entries.map(([, value]) => value),
-      barWidth: 14,
-      label: { show: true, position: 'right', color: '#294756', fontWeight: 600 },
-      itemStyle: { color: '#1c9eda', borderRadius: [0, 7, 7, 0] },
-      emphasis: { itemStyle: { color: '#0877ad' } },
-    }] : [],
-    graphic: entries.length ? [] : [emptyGraphic('No hay datos para este filtro')],
-  }
-})
-
 const topicOption = computed<Record<string, unknown>>(() => ({
   animationDuration: 550,
   aria: { enabled: true, description: 'Distribución de reclamos por tipo.' },
@@ -262,7 +239,7 @@ async function loadReports(silent = false) {
     lastUpdated.value = new Date()
   }
   catch (error) {
-    loadError.value = error instanceof Error ? error.message : 'No se pudieron cargar las métricas.'
+    loadError.value = error instanceof Error ? error.message : 'No se pudieron cargar los reclamos.'
   }
   finally {
     loading.value = false
@@ -273,22 +250,29 @@ async function loadReports(silent = false) {
 onMounted(async () => {
   await loadReports()
   unsubscribe = subscribeToAdminReports((report) => {
-    if (reports.value.some(current => current.id === report.id)) return
-    reports.value.unshift(report)
+    const index = reports.value.findIndex(current => current.id === report.id)
+    if (index === -1) reports.value.unshift(report)
+    else reports.value[index] = report
+    if (selectedReport.value?.id === report.id) selectedReport.value = report
     lastUpdated.value = new Date()
   })
+  window.addEventListener('keydown', closeModalOnEscape)
 })
 
-onBeforeUnmount(() => unsubscribe?.())
+onBeforeUnmount(() => {
+  unsubscribe?.()
+  window.removeEventListener('keydown', closeModalOnEscape)
+  document.body.style.overflow = ''
+})
+
+watch(selectedReport, (report) => {
+  document.body.style.overflow = report ? 'hidden' : ''
+})
 
 function clearFilters() {
   selectedNeighborhood.value = ALL
   selectedTopic.value = ALL
-}
-
-function selectNeighborhood(selection: AdminChartSelection) {
-  if (!selection.name) return
-  selectedNeighborhood.value = selectedNeighborhood.value === selection.name ? ALL : selection.name
+  selectedStatus.value = ALL
 }
 
 function selectTopic(selection: AdminChartSelection) {
@@ -302,6 +286,39 @@ function selectMatrixCell(selection: AdminChartSelection) {
   const neighborhood = matrixNeighborhoods.value[Number(selection.value[1])]
   if (topic) selectedTopic.value = topic
   if (neighborhood) selectedNeighborhood.value = neighborhood
+}
+
+function closeModalOnEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape') selectedReport.value = null
+}
+
+function openReport(report: AdminCitizenReport) {
+  actionError.value = ''
+  actionNotice.value = ''
+  selectedReport.value = report
+}
+
+async function setModeration(report: AdminCitizenReport, status: 'approved' | 'rejected') {
+  if (moderatingId.value || report.status === status) return
+  moderatingId.value = report.id
+  actionError.value = ''
+  actionNotice.value = ''
+
+  try {
+    const updated = await moderateReport(report.id, status)
+    const index = reports.value.findIndex(current => current.id === updated.id)
+    if (index !== -1) reports.value[index] = updated
+    if (selectedReport.value?.id === updated.id) selectedReport.value = updated
+    actionNotice.value = status === 'approved'
+      ? 'Reclamo aprobado. Ya puede publicarse en el mapa.'
+      : 'Reclamo rechazado. Dejó de estar visible en el mapa.'
+  }
+  catch (error) {
+    actionError.value = error instanceof Error ? error.message : 'No se pudo cambiar el estado del reclamo.'
+  }
+  finally {
+    moderatingId.value = ''
+  }
 }
 
 function csvCell(value: unknown) {
@@ -341,11 +358,11 @@ function exportCsv() {
         <div class="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div class="flex items-center gap-3">
-              <p class="ui-label text-river-light">Mesa de situación</p>
+              <p class="ui-label text-river-light">Moderación ciudadana</p>
               <span class="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/7 px-2.5 py-1 text-[10px] font-semibold text-white/65"><Radio :size="11" class="text-river-light" /> En tiempo real</span>
             </div>
-            <h1 class="mt-4 text-[clamp(2.1rem,4vw,4.2rem)] font-semibold leading-[.9] tracking-[-.065em]">Lectura territorial<br><span class="text-river-light">de reclamos.</span></h1>
-            <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/55">Explorá dónde se concentran los reportes y qué problemas aparecen con mayor frecuencia.</p>
+            <h1 class="mt-4 text-[clamp(2.1rem,4vw,4.2rem)] font-semibold leading-[.9] tracking-[-.065em]">Revisión y publicación<br><span class="text-river-light">de reclamos.</span></h1>
+            <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/55">Revisá el contenido y la foto de cada envío. Solo los reclamos aprobados aparecen en el mapa público.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <p v-if="lastUpdated" class="mr-1 text-[11px] text-white/42">Actualizado {{ timeFormatter.format(lastUpdated) }}</p>
@@ -359,13 +376,25 @@ function exportCsv() {
         </div>
       </header>
 
-      <section class="relative z-10 mx-2 -mt-1 grid gap-3 rounded-b-2xl border border-t-0 border-ink/10 bg-white p-4 shadow-[0_12px_30px_rgba(9,34,53,.06)] sm:grid-cols-2 lg:mx-5 lg:grid-cols-[1fr_1fr_auto] lg:px-5" aria-label="Filtros del tablero">
+      <section class="relative z-10 mx-2 -mt-1 grid gap-3 rounded-b-2xl border border-t-0 border-ink/10 bg-white p-4 shadow-[0_12px_30px_rgba(9,34,53,.06)] sm:grid-cols-2 lg:mx-5 lg:grid-cols-[1fr_1fr_1fr_auto] lg:px-5" aria-label="Filtros del tablero">
         <label class="block">
           <span class="ui-label text-ink/45">Barrio</span>
           <span class="relative mt-1.5 block">
             <select v-model="selectedNeighborhood" class="h-11 w-full appearance-none rounded-xl border border-ink/10 bg-[#f6f9fa] px-3 pr-10 text-sm font-semibold text-ink outline-none transition focus:border-river focus:ring-4 focus:ring-river/10">
               <option :value="ALL">Todos los barrios</option>
               <option v-for="neighborhood in neighborhoodOptions" :key="neighborhood" :value="neighborhood">{{ neighborhood }}</option>
+            </select>
+            <ChevronDown :size="16" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink/40" />
+          </span>
+        </label>
+        <label class="block">
+          <span class="ui-label text-ink/45">Publicación</span>
+          <span class="relative mt-1.5 block">
+            <select v-model="selectedStatus" class="h-11 w-full appearance-none rounded-xl border border-ink/10 bg-[#f6f9fa] px-3 pr-10 text-sm font-semibold text-ink outline-none transition focus:border-river focus:ring-4 focus:ring-river/10">
+              <option :value="ALL">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="approved">Aprobados</option>
+              <option value="rejected">Rechazados</option>
             </select>
             <ChevronDown :size="16" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink/40" />
           </span>
@@ -396,25 +425,88 @@ function exportCsv() {
       <template v-else>
         <section class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principales">
           <article class="rounded-2xl border border-ink/10 bg-white p-5">
-            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Reclamos en la vista</p><span class="grid size-8 place-items-center rounded-lg bg-river/10 text-river-ink"><CircleDot :size="16" /></span></div>
-            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(filteredReports.length) }}</p>
-            <p class="mt-2 text-xs text-ink/45">de {{ numberFormatter.format(reports.length) }} registros totales</p>
+            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Reclamos totales</p><span class="grid size-8 place-items-center rounded-lg bg-river/10 text-river-ink"><CircleDot :size="16" /></span></div>
+            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(reports.length) }}</p>
+            <p class="mt-2 text-xs text-ink/45">{{ numberFormatter.format(filteredReports.length) }} en la vista filtrada</p>
           </article>
           <article class="rounded-2xl border border-ink/10 bg-white p-5">
             <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Pendientes</p><span class="grid size-8 place-items-center rounded-lg bg-amber-50 text-amber-600"><Activity :size="16" /></span></div>
             <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(pendingReports) }}</p>
-            <p class="mt-2 text-xs text-ink/45">requieren revisión o seguimiento</p>
+            <p class="mt-2 text-xs text-ink/45">todavía no aparecen en el mapa</p>
           </article>
           <article class="rounded-2xl border border-ink/10 bg-white p-5">
-            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Barrios visibles</p><span class="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><MapPin :size="16" /></span></div>
-            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(visibleNeighborhoods) }}</p>
-            <p class="mt-2 text-xs text-ink/45">con reclamos en esta selección</p>
+            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Aprobados</p><span class="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><CheckCircle2 :size="16" /></span></div>
+            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(approvedReports) }}</p>
+            <p class="mt-2 text-xs text-ink/45">publicados actualmente en el mapa</p>
           </article>
           <article class="rounded-2xl border border-ink/10 bg-white p-5">
-            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Últimos 7 días</p><span class="grid size-8 place-items-center rounded-lg bg-sky-50 text-river-ink"><CheckCircle2 :size="16" /></span></div>
-            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(reportsLast7Days) }}</p>
-            <p class="mt-2 text-xs text-ink/45">{{ resolvedReports }} resueltos en la vista</p>
+            <div class="flex items-start justify-between"><p class="ui-label text-ink/42">Rechazados</p><span class="grid size-8 place-items-center rounded-lg bg-red-50 text-red-600"><Ban :size="16" /></span></div>
+            <p class="mt-6 font-mono text-[2.15rem] leading-none tracking-[-.06em] text-ink">{{ numberFormatter.format(rejectedReports) }}</p>
+            <p class="mt-2 text-xs text-ink/45">se pueden volver a aprobar</p>
           </article>
+        </section>
+
+        <section class="mt-3 overflow-hidden rounded-2xl border border-ink/10 bg-white" aria-labelledby="moderation-table-title">
+          <div class="flex flex-col gap-4 border-b border-ink/8 px-5 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+            <div>
+              <p class="ui-label text-river-ink">Bandeja de moderación</p>
+              <h2 id="moderation-table-title" class="mt-1.5 text-xl font-semibold tracking-[-.03em]">Todos los reclamos de la vista</h2>
+              <p class="mt-1 text-xs text-ink/45">Abrí “Ver” para revisar la foto y el detalle completo antes de decidir.</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-mist px-3 py-1.5 font-mono text-xs text-ink/55">{{ filteredReports.length }} reclamos</span>
+          </div>
+
+          <div v-if="actionNotice || actionError" class="border-b border-ink/8 px-5 py-3 sm:px-6">
+            <p v-if="actionNotice" role="status" class="flex items-center gap-2 text-xs font-semibold text-emerald-700"><Check :size="15" /> {{ actionNotice }}</p>
+            <p v-if="actionError" role="alert" class="flex items-center gap-2 text-xs font-semibold text-red-700"><TriangleAlert :size="15" /> {{ actionError }}</p>
+          </div>
+
+          <div v-if="!filteredReports.length" class="grid min-h-[280px] place-items-center px-6 text-center">
+            <div><CircleDot :size="24" class="mx-auto text-ink/25" /><p class="mt-3 text-sm font-semibold">No hay reclamos para esta combinación</p><button class="mt-3 text-xs font-semibold text-river-ink" @click="clearFilters">Limpiar filtros</button></div>
+          </div>
+
+          <div v-else class="hidden max-h-[680px] overflow-auto md:block">
+            <table class="w-full min-w-[1080px] border-collapse text-left">
+              <thead class="sticky top-0 z-10 bg-[#f6f9fa] shadow-[0_1px_0_rgba(9,34,53,.08)]">
+                <tr class="text-[10px] uppercase tracking-[.08em] text-ink/40">
+                  <th class="px-6 py-3.5 font-mono font-normal">Fecha</th>
+                  <th class="px-4 py-3.5 font-mono font-normal">Reclamo</th>
+                  <th class="px-4 py-3.5 font-mono font-normal">Barrio</th>
+                  <th class="px-4 py-3.5 font-mono font-normal">Foto</th>
+                  <th class="px-4 py-3.5 font-mono font-normal">Estado</th>
+                  <th class="px-6 py-3.5 text-right font-mono font-normal">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="report in filteredReports" :key="report.id" class="border-b border-ink/6 last:border-0 hover:bg-mist/35">
+                  <td class="whitespace-nowrap px-6 py-4 align-top"><p class="text-xs text-ink/62">{{ dateFormatter.format(new Date(report.createdAt)) }}</p><p class="mt-1 font-mono text-[10px] text-ink/35">{{ timeFormatter.format(new Date(report.createdAt)) }}</p></td>
+                  <td class="max-w-[310px] px-4 py-4 align-top"><p class="text-sm font-semibold">{{ report.topic }}</p><p class="mt-1 line-clamp-2 text-xs leading-relaxed text-ink/50">{{ report.description }}</p></td>
+                  <td class="max-w-[180px] px-4 py-4 align-top text-xs font-semibold text-ink/70">{{ neighborhoodOf(report) }}</td>
+                  <td class="px-4 py-4 align-top"><span v-if="report.photoUrl" class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-river-ink"><ImageIcon :size="14" /> Adjunta</span><span v-else class="text-[11px] text-ink/32">Sin foto</span></td>
+                  <td class="px-4 py-4 align-top"><span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[report.status]">{{ STATUS_LABELS[report.status] }}</span></td>
+                  <td class="px-6 py-4 align-top">
+                    <div class="flex justify-end gap-2">
+                      <button v-if="report.status !== 'approved'" class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[11px] font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(report, 'approved')"><LoaderCircle v-if="moderatingId === report.id" :size="13" class="animate-spin" /><Check v-else :size="13" /> Aprobar</button>
+                      <button v-if="report.status !== 'rejected'" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-wait disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(report, 'rejected')"><Ban :size="13" /> Rechazar</button>
+                      <button class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-ink/12 px-3 text-[11px] font-semibold text-ink transition hover:bg-mist" @click="openReport(report)"><Eye :size="13" /> Ver</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="filteredReports.length" class="divide-y divide-ink/8 md:hidden">
+            <article v-for="report in filteredReports" :key="report.id" class="p-5">
+              <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-semibold">{{ report.topic }}</p><p class="mt-1 text-[10px] text-ink/42">{{ dateFormatter.format(new Date(report.createdAt)) }} · {{ neighborhoodOf(report) }}</p></div><span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[report.status]">{{ STATUS_LABELS[report.status] }}</span></div>
+              <p class="mt-3 line-clamp-2 text-xs leading-relaxed text-ink/55">{{ report.description }}</p>
+              <div class="mt-4 flex gap-2">
+                <button v-if="report.status !== 'approved'" class="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 text-[10px] font-semibold text-white disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(report, 'approved')"><Check :size="13" /> Aprobar</button>
+                <button v-if="report.status !== 'rejected'" class="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 text-[10px] font-semibold text-red-700 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(report, 'rejected')"><Ban :size="13" /> Rechazar</button>
+                <button class="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-ink/12 px-2 text-[10px] font-semibold" @click="openReport(report)"><Eye :size="13" /> Ver</button>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,.7fr)]">
@@ -434,44 +526,60 @@ function exportCsv() {
           </article>
         </section>
 
-        <section class="mt-3 grid gap-3 xl:grid-cols-[minmax(360px,.72fr)_minmax(0,1.28fr)]">
-          <article class="overflow-hidden rounded-2xl border border-ink/10 bg-white">
-            <div class="border-b border-ink/8 px-5 py-4"><p class="ui-label text-river-ink">Concentración</p><h2 class="mt-1.5 text-lg font-semibold tracking-[-.025em]">Reclamos por barrio</h2><p class="mt-1 text-xs text-ink/45">Tocá una barra para aislar el barrio.</p></div>
-            <div class="px-2 py-3"><AdminReportChart :option="neighborhoodOption" :height="`${Math.max(310, neighborhoodRanking.length * 31 + 70)}px`" @select="selectNeighborhood" /></div>
-          </article>
-
-          <article class="overflow-hidden rounded-2xl border border-ink/10 bg-white">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink/8 px-5 py-4 sm:px-6">
-              <div><p class="ui-label text-river-ink">Registro reciente</p><h2 class="mt-1.5 text-lg font-semibold tracking-[-.025em]">Últimos reclamos de la vista</h2></div>
-              <span class="font-mono text-xs text-ink/42">{{ latestReports.length }} / {{ filteredReports.length }}</span>
-            </div>
-
-            <div v-if="!latestReports.length" class="grid min-h-[280px] place-items-center px-6 text-center"><div><CircleDot :size="24" class="mx-auto text-ink/25" /><p class="mt-3 text-sm font-semibold">No hay reclamos para esta combinación</p><button class="mt-3 text-xs font-semibold text-river-ink" @click="clearFilters">Limpiar filtros</button></div></div>
-
-            <div v-else class="hidden overflow-x-auto md:block">
-              <table class="w-full min-w-[720px] border-collapse text-left">
-                <thead><tr class="border-b border-ink/8 text-[10px] uppercase tracking-[.08em] text-ink/40"><th class="px-6 py-3 font-mono font-normal">Fecha</th><th class="px-4 py-3 font-mono font-normal">Barrio</th><th class="px-4 py-3 font-mono font-normal">Tipo</th><th class="px-4 py-3 font-mono font-normal">Estado</th></tr></thead>
-                <tbody>
-                  <tr v-for="report in latestReports" :key="report.id" class="border-b border-ink/6 last:border-0 hover:bg-mist/45">
-                    <td class="whitespace-nowrap px-6 py-4 text-xs text-ink/48">{{ dateFormatter.format(new Date(report.createdAt)) }}</td>
-                    <td class="max-w-[180px] truncate px-4 py-4 text-sm font-semibold">{{ neighborhoodOf(report) }}</td>
-                    <td class="max-w-[220px] truncate px-4 py-4 text-xs text-ink/65">{{ report.topic }}</td>
-                    <td class="px-4 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[report.status]">{{ STATUS_LABELS[report.status] }}</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div v-if="latestReports.length" class="divide-y divide-ink/8 md:hidden">
-              <article v-for="report in latestReports" :key="report.id" class="p-5">
-                <div class="flex items-start justify-between gap-3"><p class="text-sm font-semibold">{{ neighborhoodOf(report) }}</p><span class="shrink-0 text-[10px] text-ink/40">{{ dateFormatter.format(new Date(report.createdAt)) }}</span></div>
-                <p class="mt-2 text-xs text-ink/60">{{ report.topic }}</p>
-                <span class="mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[report.status]">{{ STATUS_LABELS[report.status] }}</span>
-              </article>
-            </div>
-          </article>
-        </section>
       </template>
     </div>
+
+    <Teleport to="body">
+      <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" leave-active-class="transition duration-150 ease-in" leave-to-class="opacity-0">
+        <div v-if="selectedReport" class="fixed inset-0 z-50 grid place-items-center bg-ink/72 p-3 backdrop-blur-sm sm:p-6" @click.self="selectedReport = null">
+          <section role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" class="flex max-h-[92dvh] w-full max-w-[1080px] flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl">
+            <header class="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7 sm:py-5">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="ui-label text-river-ink">Revisión del reclamo</p>
+                  <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[selectedReport.status]">{{ STATUS_LABELS[selectedReport.status] }}</span>
+                </div>
+                <h2 id="report-dialog-title" class="mt-2 text-xl font-semibold tracking-[-.035em] sm:text-2xl">{{ selectedReport.topic }}</h2>
+              </div>
+              <button class="grid size-10 shrink-0 place-items-center rounded-xl border border-ink/10 transition hover:bg-mist" aria-label="Cerrar detalle" @click="selectedReport = null"><X :size="19" /></button>
+            </header>
+
+            <div class="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,.82fr)]">
+              <div class="flex min-h-[300px] items-center justify-center bg-[#dfe9e8] p-4 sm:p-7 lg:min-h-[520px]">
+                <a v-if="selectedReport.photoUrl" :href="selectedReport.photoUrl" target="_blank" rel="noopener noreferrer" class="group relative block max-h-full max-w-full overflow-hidden rounded-2xl bg-ink/5 shadow-[0_16px_45px_rgba(9,34,53,.16)]">
+                  <img :src="selectedReport.photoUrl" :alt="`Foto adjunta al reclamo ${selectedReport.topic}`" class="max-h-[62dvh] w-auto max-w-full object-contain" />
+                  <span class="absolute inset-x-3 bottom-3 rounded-xl bg-ink/82 px-3 py-2 text-center text-[10px] font-semibold text-white opacity-0 backdrop-blur transition group-hover:opacity-100">Abrir imagen original</span>
+                </a>
+                <div v-else class="text-center text-ink/38"><span class="mx-auto grid size-14 place-items-center rounded-2xl border border-ink/10 bg-white/65"><ImageIcon :size="25" /></span><p class="mt-3 text-sm font-semibold text-ink/55">Este reclamo no tiene foto</p></div>
+              </div>
+
+              <div class="p-5 sm:p-7">
+                <p class="ui-label text-ink/40">Descripción enviada</p>
+                <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink/76">{{ selectedReport.description }}</p>
+
+                <dl class="mt-6 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
+                  <div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Barrio</dt><dd class="text-right text-xs font-semibold">{{ neighborhoodOf(selectedReport) }}</dd></div>
+                  <div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Fecha</dt><dd class="text-right text-xs">{{ dateFormatter.format(new Date(selectedReport.createdAt)) }} · {{ timeFormatter.format(new Date(selectedReport.createdAt)) }}</dd></div>
+                  <div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Ubicación</dt><dd class="flex items-center justify-end gap-1.5 text-right font-mono text-[10px]"><MapPin :size="13" class="text-river" /> {{ selectedReport.latitude.toFixed(6) }}, {{ selectedReport.longitude.toFixed(6) }}</dd></div>
+                  <div v-if="selectedReport.photoName" class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Archivo</dt><dd class="break-all text-right font-mono text-[10px]">{{ selectedReport.photoName }}</dd></div>
+                  <div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">ID</dt><dd class="break-all text-right font-mono text-[9px] text-ink/55">{{ selectedReport.id }}</dd></div>
+                </dl>
+
+                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900"><strong>Antes de publicar:</strong> comprobá que la foto corresponda al reclamo y que no incluya contenido indebido o datos personales.</div>
+              </div>
+            </div>
+
+            <footer class="flex flex-col gap-3 border-t border-ink/10 bg-[#f8faf9] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+              <div class="min-h-5 text-xs font-semibold"><p v-if="actionNotice" role="status" class="flex items-center gap-2 text-emerald-700"><Check :size="15" /> {{ actionNotice }}</p><p v-else-if="actionError" role="alert" class="flex items-center gap-2 text-red-700"><TriangleAlert :size="15" /> {{ actionError }}</p></div>
+              <div class="flex flex-wrap justify-end gap-2">
+                <button class="h-11 rounded-xl border border-ink/12 bg-white px-4 text-xs font-semibold transition hover:bg-mist" @click="selectedReport = null">Cerrar</button>
+                <button v-if="selectedReport.status !== 'rejected'" class="inline-flex h-11 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(selectedReport, 'rejected')"><Ban :size="15" /> Rechazar</button>
+                <button v-if="selectedReport.status !== 'approved'" class="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(selectedReport, 'approved')"><LoaderCircle v-if="moderatingId === selectedReport.id" :size="15" class="animate-spin" /><Check v-else :size="15" /> Aprobar y publicar</button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

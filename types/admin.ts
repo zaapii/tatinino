@@ -9,6 +9,7 @@ export type AdminCitizenReport = {
   longitude: number
   photoPath: string | null
   photoName: string | null
+  photoUrl: string | null
   status: CitizenReportStatus
   createdAt: string
 }

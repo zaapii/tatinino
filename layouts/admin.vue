@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, BarChart3, ExternalLink, LogOut, ShieldCheck, Waves } from 'lucide-vue-next'
+import { ArrowLeft, ExternalLink, ListChecks, LogOut, ShieldCheck, Waves } from 'lucide-vue-next'
 
 const route = useRoute()
 const email = ref('')
@@ -39,8 +39,8 @@ async function signOut() {
           class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition"
           :class="route.path === '/admin' ? 'bg-white text-ink' : 'text-white/65 hover:bg-white/8 hover:text-white'"
         >
-          <BarChart3 :size="18" />
-          Lectura territorial
+          <ListChecks :size="18" />
+          Moderar reclamos
         </NuxtLink>
       </nav>
 

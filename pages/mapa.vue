@@ -24,6 +24,7 @@ const reportLocation = ref<MapPoint | null>(null)
 const reports = ref<CitizenReport[]>([])
 const { fetchReports, subscribeToReports } = useCitizenReports()
 let stopReportSubscription: (() => void) | undefined
+let reportRefreshTimer: ReturnType<typeof setInterval> | undefined
 const waterVisible = computed(() => layers.value.find(layer => layer.id === 'water')?.enabled ?? true)
 const reportsVisible = computed(() => layers.value.find(layer => layer.id === 'citizen-reports')?.enabled ?? true)
 
@@ -64,18 +65,36 @@ function upsertReport(report: CitizenReport) {
   else reports.value[index] = report
 }
 
-function addReport(report: CitizenReport) {
-  upsertReport(report)
-  const reportLayer = layers.value.find(layer => layer.id === 'citizen-reports')
-  if (reportLayer) reportLayer.enabled = true
+function finishReportSubmission() {
   reportLocation.value = null
+}
+
+async function syncApprovedReports(showError = false) {
+  try {
+    const approvedReports = await fetchReports()
+    reports.value = approvedReports
+    const selectedReportId = selectedPoint.value?.feature?.layerId === 'citizen-reports'
+      ? String(selectedPoint.value.feature.properties.id ?? '')
+      : ''
+    if (selectedReportId && !approvedReports.some(report => report.id === selectedReportId)) selectedPoint.value = null
+    if (showError) reportsError.value = ''
+  }
+  catch (error) {
+    if (showError) reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.'
+    throw error
+  }
+}
+
+function refreshReportsOnFocus() {
+  void syncApprovedReports(true).catch(() => undefined)
 }
 
 onMounted(async () => {
   try {
     stopReportSubscription = subscribeToReports(upsertReport)
-    const storedReports = await fetchReports()
-    for (const report of storedReports.reverse()) upsertReport(report)
+    await syncApprovedReports()
+    window.addEventListener('focus', refreshReportsOnFocus)
+    reportRefreshTimer = setInterval(refreshReportsOnFocus, 30_000)
   }
   catch (error) {
     reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.'
@@ -85,7 +104,11 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(() => stopReportSubscription?.())
+onBeforeUnmount(() => {
+  stopReportSubscription?.()
+  window.removeEventListener('focus', refreshReportsOnFocus)
+  if (reportRefreshTimer) clearInterval(reportRefreshTimer)
+})
 </script>
 
 <template>
@@ -123,7 +146,7 @@ onBeforeUnmount(() => stopReportSubscription?.())
     </header>
 
     <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
-    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @created="addReport" />
+    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @created="finishReportSubmission" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
     <MapPointInfoPanel v-if="selectedPoint && !placingReport" :point="selectedPoint" @close="selectedPoint = null" @report="startReportAtPoint" />

@@ -34,11 +34,9 @@ const draftHaloLayerId = 'citizen-report-draft-halo'
 const draftPointLayerId = 'citizen-report-draft-point'
 
 const reportStatusLabels: Record<CitizenReport['status'], string> = {
-  reported: 'Reportado · sin verificar',
-  verified: 'Verificado',
-  in_progress: 'En intervención',
-  resolved: 'Resuelto',
-  dismissed: 'Descartado',
+  pending: 'Pendiente de revisión',
+  approved: 'Aprobado para publicación',
+  rejected: 'Rechazado',
 }
 
 type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'other'
@@ -245,7 +243,7 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
     const dataBase = configuredBase || '/data/hydraulics'
     map.addSource(sourceId, {
       type: 'geojson',
-      data: `${dataBase}/${source.file}`,
+      data: source.dataUrl ?? `${dataBase}/${source.file}`,
       generateId: true,
     })
     loadingSources.add(sourceId)
@@ -328,6 +326,28 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
         'text-color': source.color,
         'text-halo-color': 'rgba(255, 255, 255, 0.95)',
         'text-halo-width': 1.4,
+      },
+    })
+  }
+  else if (source.labelProperty && !map.getLayer(styleIdsFor(definition.id)[3])) {
+    map.addLayer({
+      id: styleIdsFor(definition.id)[3],
+      type: 'symbol',
+      source: sourceId,
+      minzoom: source.labelMinZoom ?? 12,
+      filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
+      layout: {
+        visibility,
+        'text-field': ['get', source.labelProperty],
+        'text-font': ['Open Sans Regular'],
+        'text-size': 11,
+        'text-padding': 8,
+        'text-max-width': 12,
+      },
+      paint: {
+        'text-color': '#62263f',
+        'text-halo-color': 'rgba(255, 255, 255, 0.96)',
+        'text-halo-width': 1.5,
       },
     })
   }
@@ -518,10 +538,10 @@ function featureInfo(feature: MapGeoJSONFeature) {
 
   return {
     layerId,
-    layerLabel: definition.label,
+    layerLabel: layerId === 'renabap-neighborhoods' ? String(properties.barrio ?? definition.label) : definition.label,
     color: definition.source.color,
     geometryType: feature.geometry.type,
-    sourceFile: definition.source.file,
+    sourceFile: definition.source.dataUrl ?? definition.source.file,
     properties,
   }
 }
@@ -559,7 +579,7 @@ onMounted(async () => {
     updateBaseVisibility(props.waterVisible)
     syncHydraulicLayers()
     addCitizenReportLayers()
-    map?.fitBounds([[-60.764, -31.681], [-60.584, -31.553]], {
+    map?.fitBounds([[-60.77, -31.71], [-60.55, -31.55]], {
       padding: { top: 116, right: 24, bottom: 72, left: 24 },
       maxZoom: 12.15,
       duration: 0,

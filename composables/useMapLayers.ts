@@ -10,6 +10,10 @@ export function useMapLayers() {
       id: 'elevation', label: 'Anotaciones numéricas sin clasificar', description: 'Medidas heterogéneas del CAD; se conservan para auditoría, no como altitud', enabled: false, status: 'available', group: 'territory',
       source: { file: 'cotas.geojson', featureCount: 10399, color: '#716961', minZoom: 13.5, lineWidth: 1, pointRadius: 2 },
     },
+    {
+      id: 'renabap-neighborhoods', label: 'Barrios RENABAP', description: '69 polígonos de barrios populares de la localidad de Santa Fe; incluye la cantidad de familias informada en el archivo fuente', enabled: false, status: 'available', group: 'territory',
+      source: { file: 'barrios_renabap.geojson', dataUrl: '/data/territory/barrios_renabap.geojson', featureCount: 69, color: '#b64f7a', minZoom: 9.5, lineWidth: 1.7, fillOpacity: 0.2, labelProperty: 'barrio', labelMinZoom: 11.5 },
+    },
     { id: 'vulnerability', label: 'Vulnerabilidad territorial', description: 'Zonas caracterizadas por fuentes oficiales', enabled: false, status: 'soon', group: 'territory' },
     {
       id: 'basins', label: 'Cuencas', description: 'Trazados de cuencas extraídos del plano hidráulico 2025', enabled: false, status: 'available', group: 'territory',
@@ -64,7 +68,7 @@ export function useMapLayers() {
     { id: 'river-levels', label: 'Niveles de los ríos', description: 'Mediciones y tendencias oficiales', enabled: false, status: 'soon', group: 'current' },
     { id: 'rainfall', label: 'Precipitaciones y pronósticos', description: 'Información meteorológica actualizada', enabled: false, status: 'soon', group: 'current' },
     { id: 'alerts', label: 'Alertas oficiales', description: 'Comunicados meteorológicos e hidrológicos', enabled: false, status: 'soon', group: 'current' },
-    { id: 'citizen-reports', label: 'Reclamos ciudadanos', description: 'Puntos cargados por la comunidad y guardados en el registro público; ingresan sin validación oficial', enabled: true, status: 'available', group: 'community', color: '#d94841' },
+    { id: 'citizen-reports', label: 'Reclamos ciudadanos', description: 'Puntos cargados por la comunidad y aprobados para su publicación por el equipo administrador', enabled: true, status: 'available', group: 'community', color: '#d94841' },
   ])
 
   function toggleLayer(id: string) {

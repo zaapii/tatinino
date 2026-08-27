@@ -17,8 +17,10 @@ type AdminCitizenReportRow = {
 
 const ADMIN_REPORT_COLUMNS = 'id, topic, description, neighborhood, latitude, longitude, photo_path, photo_name, status, created_at'
 const PAGE_SIZE = 1000
+const PHOTOS_BUCKET = 'citizen-report-photos'
 
 function mapAdminReport(row: AdminCitizenReportRow): AdminCitizenReport {
+  const supabase = useSupabaseClient()
   return {
     id: row.id,
     topic: row.topic,
@@ -28,6 +30,9 @@ function mapAdminReport(row: AdminCitizenReportRow): AdminCitizenReport {
     longitude: row.longitude,
     photoPath: row.photo_path,
     photoName: row.photo_name,
+    photoUrl: row.photo_path
+      ? supabase.storage.from(PHOTOS_BUCKET).getPublicUrl(row.photo_path).data.publicUrl
+      : null,
     status: row.status,
     createdAt: row.created_at,
   }
@@ -66,6 +71,11 @@ export function useAdminReports() {
         { event: 'INSERT', schema: 'public', table: 'citizen_reports' },
         payload => onInsert(mapAdminReport(payload.new as AdminCitizenReportRow)),
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'citizen_reports' },
+        payload => onInsert(mapAdminReport(payload.new as AdminCitizenReportRow)),
+      )
       .subscribe()
 
     return () => {
@@ -73,5 +83,18 @@ export function useAdminReports() {
     }
   }
 
-  return { fetchAdminReports, subscribeToAdminReports }
+  async function moderateReport(id: string, status: Extract<CitizenReportStatus, 'approved' | 'rejected'>) {
+    const supabase = useSupabaseClient()
+    const { data, error } = await supabase
+      .from('citizen_reports')
+      .update({ status })
+      .eq('id', id)
+      .select(ADMIN_REPORT_COLUMNS)
+      .single()
+
+    if (error) throw new Error(`No se pudo actualizar el reclamo: ${error.message}`)
+    return mapAdminReport(data as AdminCitizenReportRow)
+  }
+
+  return { fetchAdminReports, moderateReport, subscribeToAdminReports }
 }

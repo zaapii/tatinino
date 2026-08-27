@@ -28,7 +28,7 @@ export type CitizenReport = {
   status: CitizenReportStatus
 }
 
-export type CitizenReportStatus = 'reported' | 'verified' | 'in_progress' | 'resolved' | 'dismissed'
+export type CitizenReportStatus = 'pending' | 'approved' | 'rejected'
 
 export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'photoUrl' | 'status'> & {
   photoFile?: File
@@ -39,6 +39,7 @@ export type LayerGroup = 'territory' | 'protection' | 'current' | 'community'
 
 export type HydraulicLayerSource = {
   file: string
+  dataUrl?: string
   featureCount: number
   color: string
   minZoom: number
@@ -46,6 +47,8 @@ export type HydraulicLayerSource = {
   pointRadius?: number
   fillOpacity?: number
   dashed?: boolean
+  labelProperty?: string
+  labelMinZoom?: number
 }
 
 export type MapLayerDefinition = {

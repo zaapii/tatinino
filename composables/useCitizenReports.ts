@@ -63,6 +63,7 @@ export function useCitizenReports() {
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
       .select(REPORT_COLUMNS)
+      .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(500)
 
@@ -91,7 +92,7 @@ export function useCitizenReports() {
       if (uploadError) throw new Error(`No se pudo subir la foto: ${uploadError.message}`)
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from(REPORTS_TABLE)
       .insert({
         topic: form.topic,
@@ -102,21 +103,23 @@ export function useCitizenReports() {
         photo_path: photoPath,
         photo_name: form.photoName ?? null,
       })
-      .select(REPORT_COLUMNS)
-      .single()
 
     if (error) throw new Error(`No se pudo guardar el reclamo: ${error.message}`)
-    return reportFromRow(data as CitizenReportRow)
   }
 
-  function subscribeToReports(onInsert: (report: CitizenReport) => void) {
+  function subscribeToReports(onChange: (report: CitizenReport) => void) {
     const supabase = useSupabaseClient()
     const channel: RealtimeChannel = supabase
       .channel('public-citizen-reports')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: REPORTS_TABLE },
-        payload => onInsert(reportFromRow(payload.new as CitizenReportRow)),
+        { event: 'INSERT', schema: 'public', table: REPORTS_TABLE, filter: 'status=eq.approved' },
+        payload => onChange(reportFromRow(payload.new as CitizenReportRow)),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: REPORTS_TABLE, filter: 'status=eq.approved' },
+        payload => onChange(reportFromRow(payload.new as CitizenReportRow)),
       )
       .subscribe()
 

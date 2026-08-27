@@ -83,9 +83,9 @@ async function login() {
       </NuxtLink>
 
       <div class="max-w-[640px] pb-14">
-        <p class="ui-label text-river-light">Mesa de situación · Reclamos ciudadanos</p>
-        <h1 class="mt-5 text-[clamp(3rem,6vw,6.8rem)] font-semibold leading-[.86] tracking-[-.07em]">Leer el territorio<br><span class="text-river-light">para decidir.</span></h1>
-        <p class="mt-8 max-w-lg text-base leading-relaxed text-white/58">Un acceso reservado para observar patrones, priorizar respuestas y convertir reportes dispersos en una lectura común de la ciudad.</p>
+        <p class="ui-label text-river-light">Moderación · Reclamos ciudadanos</p>
+        <h1 class="mt-5 text-[clamp(3rem,6vw,6.8rem)] font-semibold leading-[.86] tracking-[-.07em]">Revisar antes<br><span class="text-river-light">de publicar.</span></h1>
+        <p class="mt-8 max-w-lg text-base leading-relaxed text-white/58">Un acceso reservado para comprobar cada envío, cuidar el contenido público y decidir qué reclamos aparecen en el mapa.</p>
       </div>
 
       <div class="flex items-center gap-3 text-xs text-white/42"><Waves :size="16" class="text-river-light" /> Información territorial actualizada en tiempo real</div>
@@ -101,7 +101,7 @@ async function login() {
         <div class="mb-8 flex size-12 items-center justify-center rounded-2xl border border-river/20 bg-river/10 text-river-ink"><LockKeyhole :size="22" /></div>
         <p class="ui-label text-river-ink">Acceso restringido</p>
         <h2 class="mt-3 text-[2.35rem] font-semibold leading-none tracking-[-.055em] text-ink">Administración</h2>
-        <p class="mt-4 text-sm leading-relaxed text-ink/55">Ingresá con una cuenta autorizada para consultar las métricas de reclamos.</p>
+        <p class="mt-4 text-sm leading-relaxed text-ink/55">Ingresá con una cuenta autorizada para revisar, aprobar o rechazar reclamos.</p>
 
         <div v-if="checkingSession" class="mt-10 flex items-center gap-3 rounded-xl border border-ink/10 bg-white p-4 text-sm text-ink/60">
           <LoaderCircle :size="18" class="animate-spin text-river" /> Verificando sesión…
