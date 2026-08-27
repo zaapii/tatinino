@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, X } from 'lucide-vue-next'
-import type { CitizenReport, MapPoint, MapSelection } from '~/types/map'
+import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
+import type { CitizenReport, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
@@ -19,14 +19,20 @@ const loadingLayerCount = ref(0)
 const layerError = ref('')
 const reportsError = ref('')
 const reportsLoading = ref(true)
+const riverLevelsError = ref('')
+const riverLevelsLoading = ref(true)
 const placingReport = ref(false)
 const reportLocation = ref<MapPoint | null>(null)
 const reports = ref<CitizenReport[]>([])
+const riverLevels = ref<RiverLevelReading[]>([])
 const { fetchReports, subscribeToReports } = useCitizenReports()
+const { fetchRiverLevels } = useRiverLevels()
 let stopReportSubscription: (() => void) | undefined
 let reportRefreshTimer: ReturnType<typeof setInterval> | undefined
+let riverLevelRefreshTimer: ReturnType<typeof setInterval> | undefined
 const waterVisible = computed(() => layers.value.find(layer => layer.id === 'water')?.enabled ?? true)
 const reportsVisible = computed(() => layers.value.find(layer => layer.id === 'citizen-reports')?.enabled ?? true)
+const riverLevelsVisible = computed(() => layers.value.find(layer => layer.id === 'river-levels')?.enabled ?? true)
 
 watch(layersOpen, (open) => { if (open) reportOpen.value = false })
 watch(reportOpen, (open) => { if (open) layersOpen.value = false })
@@ -87,27 +93,41 @@ async function syncApprovedReports(showError = false) {
 
 function refreshReportsOnFocus() {
   void syncApprovedReports(true).catch(() => undefined)
+  void syncRiverLevels().catch(() => undefined)
 }
 
-onMounted(async () => {
+async function syncRiverLevels(force = false) {
   try {
-    stopReportSubscription = subscribeToReports(upsertReport)
-    await syncApprovedReports()
-    window.addEventListener('focus', refreshReportsOnFocus)
-    reportRefreshTimer = setInterval(refreshReportsOnFocus, 30_000)
+    const nextLevels = await fetchRiverLevels(force)
+    riverLevels.value = nextLevels
+    riverLevelsError.value = nextLevels.every(reading => reading.error)
+      ? 'No se pudieron consultar las escalas oficiales de los ríos.'
+      : ''
   }
   catch (error) {
-    reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.'
+    riverLevelsError.value = error instanceof Error ? error.message : 'No se pudieron consultar los niveles de los ríos.'
   }
   finally {
-    reportsLoading.value = false
+    riverLevelsLoading.value = false
   }
+}
+
+onMounted(() => {
+  stopReportSubscription = subscribeToReports(upsertReport)
+  void syncApprovedReports()
+    .catch(error => reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.')
+    .finally(() => reportsLoading.value = false)
+  void syncRiverLevels()
+  window.addEventListener('focus', refreshReportsOnFocus)
+  reportRefreshTimer = setInterval(() => void syncApprovedReports(true).catch(() => undefined), 30_000)
+  riverLevelRefreshTimer = setInterval(() => void syncRiverLevels(true), 30 * 60_000)
 })
 
 onBeforeUnmount(() => {
   stopReportSubscription?.()
   window.removeEventListener('focus', refreshReportsOnFocus)
   if (reportRefreshTimer) clearInterval(reportRefreshTimer)
+  if (riverLevelRefreshTimer) clearInterval(riverLevelRefreshTimer)
 })
 </script>
 
@@ -119,6 +139,8 @@ onBeforeUnmount(() => {
         :layers="layers"
         :reports="reports"
         :reports-visible="reportsVisible"
+        :river-levels="riverLevels"
+        :river-levels-visible="riverLevelsVisible"
         :placing-report="placingReport"
         :report-location="reportLocation"
         @ready="mapReady = true"
@@ -160,9 +182,11 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="loadingLayerCount" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><LoaderCircle :size="14" class="animate-spin text-river"/> Cargando {{ loadingLayerCount === 1 ? 'capa' : `${loadingLayerCount} capas` }}…</div>
+    <div v-else-if="riverLevelsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Waves :size="14" class="animate-pulse text-river"/> Consultando niveles de los ríos…</div>
     <div v-else-if="reportsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Cloud :size="14" class="animate-pulse text-river"/> Sincronizando reclamos…</div>
     <div v-else-if="reportsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ reportsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="reportsError = ''"><X :size="13"/></button></div>
     <div v-else-if="layerError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ layerError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="layerError = ''"><X :size="13"/></button></div>
+    <div v-else-if="riverLevelsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ riverLevelsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="riverLevelsError = ''"><X :size="13"/></button></div>
 
     <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
   </div>

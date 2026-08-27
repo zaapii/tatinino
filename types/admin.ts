@@ -14,6 +14,31 @@ export type AdminCitizenReport = {
   createdAt: string
 }
 
+export type AdminReportStatusFilter = CitizenReportStatus | 'all'
+
+export type AdminReportFilters = {
+  status: AdminReportStatusFilter
+  topic?: string
+  neighborhood?: string
+}
+
+export type AdminReportPageRequest = AdminReportFilters & {
+  page: number
+  pageSize: number
+}
+
+export type AdminReportPage = {
+  reports: AdminCitizenReport[]
+  count: number
+}
+
+export type AdminReportCounts = {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+}
+
 export type AdminChartSelection = {
   name: string
   seriesName: string

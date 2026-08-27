@@ -65,7 +65,7 @@ export function useMapLayers() {
       source: { file: 'descargas_gravedad.geojson', featureCount: 22, color: '#d07832', minZoom: 11.5, lineWidth: 2.2, pointRadius: 5 },
     },
     { id: 'water', label: 'Mapa base y cursos de agua', description: 'Calles, barrios, Paraná, Salado, lagunas y canales de OpenStreetMap', enabled: true, status: 'active', group: 'current' },
-    { id: 'river-levels', label: 'Niveles de los ríos', description: 'Mediciones y tendencias oficiales', enabled: false, status: 'soon', group: 'current' },
+    { id: 'river-levels', label: 'Niveles de los ríos', description: 'Últimas mediciones oficiales disponibles para Paraná, Santa Fe y Salado, con fecha, tendencia y umbrales de referencia', enabled: true, status: 'active', group: 'current', color: '#0877ad' },
     { id: 'rainfall', label: 'Precipitaciones y pronósticos', description: 'Información meteorológica actualizada', enabled: false, status: 'soon', group: 'current' },
     { id: 'alerts', label: 'Alertas oficiales', description: 'Comunicados meteorológicos e hidrológicos', enabled: false, status: 'soon', group: 'current' },
     { id: 'citizen-reports', label: 'Reclamos ciudadanos', description: 'Puntos cargados por la comunidad y aprobados para su publicación por el equipo administrador', enabled: true, status: 'available', group: 'community', color: '#d94841' },

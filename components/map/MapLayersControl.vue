@@ -48,6 +48,7 @@ const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(cou
                       <span v-if="layer.status === 'soon'" class="ui-label rounded-full bg-ink/5 px-2 py-1 text-[8px] text-ink/42">Próx.</span>
                       <span v-else-if="layer.source" class="font-mono text-[9px] text-ink/38">{{ formatCount(layer.source.featureCount) }}</span>
                       <span v-else-if="layer.id === 'citizen-reports'" class="ui-label rounded-full bg-[#d94841]/10 px-2 py-1 text-[8px] text-[#b9312b]">Público</span>
+                      <span v-else-if="layer.id === 'river-levels'" class="ui-label rounded-full bg-river/10 px-2 py-1 text-[8px] text-river">INA</span>
                       <span v-else class="ui-label rounded-full bg-river/8 px-2 py-1 text-[8px] text-river">Base</span>
                       <button
                         class="grid size-7 place-items-center rounded-lg text-ink/45 transition hover:bg-river/8 hover:text-river"

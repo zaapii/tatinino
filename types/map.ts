@@ -30,6 +30,30 @@ export type CitizenReport = {
 
 export type CitizenReportStatus = 'pending' | 'approved' | 'rejected'
 
+export type RiverLevelStatus = 'low' | 'normal' | 'alert' | 'evacuation' | 'unknown'
+export type RiverLevelTrend = 'rising' | 'falling' | 'steady' | 'unknown'
+
+export type RiverLevelReading = {
+  id: string
+  riverName: string
+  stationName: string
+  seriesId: number
+  point: MapPoint
+  level: number | null
+  previousLevel: number | null
+  observedAt: string | null
+  updatedAt: string | null
+  lowWaterLevel: number | null
+  alertLevel: number | null
+  evacuationLevel: number | null
+  status: RiverLevelStatus
+  trend: RiverLevelTrend
+  isStale: boolean
+  sourceName: string
+  dataUrl: string
+  error?: string
+}
+
 export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'photoUrl' | 'status'> & {
   photoFile?: File
 }

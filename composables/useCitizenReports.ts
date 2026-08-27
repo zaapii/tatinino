@@ -17,6 +17,7 @@ type CitizenReportRow = {
 const REPORTS_TABLE = 'citizen_reports'
 const PHOTOS_BUCKET = 'citizen-report-photos'
 const REPORT_COLUMNS = 'id, topic, description, neighborhood, latitude, longitude, photo_path, photo_name, status, created_at'
+const PUBLIC_REPORTS_PAGE_SIZE = 1000
 
 const imageExtensions: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -60,15 +61,27 @@ export function useCitizenReports() {
 
   async function fetchReports() {
     const supabase = useSupabaseClient()
-    const { data, error } = await supabase
-      .from(REPORTS_TABLE)
-      .select(REPORT_COLUMNS)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(500)
+    const reports: CitizenReport[] = []
+    let from = 0
 
-    if (error) throw new Error(`No se pudieron cargar los reclamos: ${error.message}`)
-    return (data as CitizenReportRow[]).map(reportFromRow)
+    while (true) {
+      const { data, error } = await supabase
+        .from(REPORTS_TABLE)
+        .select(REPORT_COLUMNS)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + PUBLIC_REPORTS_PAGE_SIZE - 1)
+
+      if (error) throw new Error(`No se pudieron cargar los reclamos: ${error.message}`)
+
+      const page = (data as CitizenReportRow[]).map(reportFromRow)
+      reports.push(...page)
+      if (page.length < PUBLIC_REPORTS_PAGE_SIZE) break
+      from += PUBLIC_REPORTS_PAGE_SIZE
+    }
+
+    return reports
   }
 
   async function createReport(form: CitizenReportForm) {

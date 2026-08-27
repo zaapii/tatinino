@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
-import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection } from '~/types/map'
+import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
 
 const emit = defineEmits<{
   pointSelected: [selection: MapSelection]
@@ -15,6 +15,8 @@ const props = defineProps<{
   layers: MapLayerDefinition[]
   reports: CitizenReport[]
   reportsVisible: boolean
+  riverLevels: RiverLevelReading[]
+  riverLevelsVisible: boolean
   placingReport: boolean
   reportLocation: MapPoint | null
 }>()
@@ -29,6 +31,10 @@ let resizeObserver: ResizeObserver | undefined
 const reportSourceId = 'citizen-reports'
 const reportHaloLayerId = 'citizen-reports-halo'
 const reportPointLayerId = 'citizen-reports-point'
+const riverLevelSourceId = 'river-levels'
+const riverLevelHaloLayerId = 'river-levels-halo'
+const riverLevelPointLayerId = 'river-levels-point'
+const riverLevelLabelLayerId = 'river-levels-label'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
 const draftPointLayerId = 'citizen-report-draft-point'
@@ -37,6 +43,38 @@ const reportStatusLabels: Record<CitizenReport['status'], string> = {
   pending: 'Pendiente de revisión',
   approved: 'Aprobado para publicación',
   rejected: 'Rechazado',
+}
+
+const riverStatusLabels: Record<RiverLevelReading['status'], string> = {
+  low: 'Aguas bajas',
+  normal: 'Por debajo del nivel de alerta',
+  alert: 'Nivel de alerta alcanzado',
+  evacuation: 'Nivel de evacuación alcanzado',
+  unknown: 'Estado no disponible',
+}
+
+const riverStatusColors: Record<RiverLevelReading['status'], string> = {
+  low: '#d59a27',
+  normal: '#0877ad',
+  alert: '#df7626',
+  evacuation: '#c43d38',
+  unknown: '#78909c',
+}
+
+const levelFormatter = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const riverDateFormatter = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+const riverDateTimeFormatter = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+function levelLabel(value: number | null) {
+  return value === null ? 'Sin dato' : `${levelFormatter.format(value)} m`
+}
+
+function trendLabel(reading: RiverLevelReading) {
+  if (reading.level === null || reading.previousLevel === null || reading.trend === 'unknown') return 'Sin tendencia disponible'
+  const difference = reading.level - reading.previousLevel
+  if (reading.trend === 'rising') return `Sube ${levelFormatter.format(Math.abs(difference))} m`
+  if (reading.trend === 'falling') return `Baja ${levelFormatter.format(Math.abs(difference))} m`
+  return 'Permanece estable'
 }
 
 type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'other'
@@ -373,6 +411,108 @@ function reportGeoJson() {
   }
 }
 
+function riverLevelGeoJson() {
+  return {
+    type: 'FeatureCollection' as const,
+    features: props.riverLevels.map(reading => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [reading.point.longitude, reading.point.latitude] },
+      properties: {
+        id: reading.id,
+        riverName: reading.riverName,
+        stationName: reading.stationName,
+        levelLabel: levelLabel(reading.level),
+        observedAtLabel: reading.observedAt ? riverDateFormatter.format(new Date(reading.observedAt)) : 'Sin registro reciente',
+        updatedAtLabel: reading.updatedAt ? riverDateTimeFormatter.format(new Date(reading.updatedAt)) : '',
+        trendLabel: trendLabel(reading),
+        riverStatusLabel: riverStatusLabels[reading.status],
+        lowWaterLevelLabel: reading.lowWaterLevel === null ? '' : levelLabel(reading.lowWaterLevel),
+        alertLevelLabel: reading.alertLevel === null ? '' : levelLabel(reading.alertLevel),
+        evacuationLevelLabel: reading.evacuationLevel === null ? '' : levelLabel(reading.evacuationLevel),
+        sourceName: reading.sourceName,
+        dataUrl: reading.dataUrl,
+        isStale: reading.isStale,
+        dataStateLabel: reading.error ? 'No se pudo consultar' : reading.isStale ? 'Dato con demora' : 'Último dato disponible',
+        error: reading.error ?? '',
+        markerColor: reading.isStale ? '#718792' : riverStatusColors[reading.status],
+      },
+    })),
+  }
+}
+
+function addRiverLevelLayers() {
+  if (!map) return
+  const visibility: 'visible' | 'none' = props.riverLevelsVisible ? 'visible' : 'none'
+  if (!map.getSource(riverLevelSourceId)) map.addSource(riverLevelSourceId, { type: 'geojson', data: riverLevelGeoJson() })
+  else updateRiverLevelData()
+
+  if (!map.getLayer(riverLevelHaloLayerId)) {
+    map.addLayer({
+      id: riverLevelHaloLayerId,
+      source: riverLevelSourceId,
+      type: 'circle',
+      layout: { visibility },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 15, 16, 22],
+        'circle-color': ['get', 'markerColor'],
+        'circle-opacity': 0.18,
+        'circle-blur': 0.28,
+      },
+    })
+  }
+  if (!map.getLayer(riverLevelPointLayerId)) {
+    map.addLayer({
+      id: riverLevelPointLayerId,
+      source: riverLevelSourceId,
+      type: 'circle',
+      layout: { visibility },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 6.5, 16, 9],
+        'circle-color': ['get', 'markerColor'],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 3,
+      },
+    })
+  }
+  if (!map.getLayer(riverLevelLabelLayerId)) {
+    map.addLayer({
+      id: riverLevelLabelLayerId,
+      source: riverLevelSourceId,
+      type: 'symbol',
+      minzoom: 9,
+      layout: {
+        visibility,
+        'text-field': ['concat', ['get', 'riverName'], '\n', ['get', 'levelLabel']],
+        'text-font': ['Open Sans Regular'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10.5, 14, 12],
+        'text-offset': [0, 1.35],
+        'text-anchor': 'top',
+        'text-line-height': 1.18,
+        'text-padding': 4,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+      },
+      paint: {
+        'text-color': '#092235',
+        'text-halo-color': 'rgba(255, 255, 255, .96)',
+        'text-halo-width': 2,
+      },
+    })
+  }
+}
+
+function updateRiverLevelData() {
+  if (!map) return
+  ;(map.getSource(riverLevelSourceId) as GeoJSONSource | undefined)?.setData(riverLevelGeoJson())
+}
+
+function updateRiverLevelVisibility(visible: boolean) {
+  if (!map?.isStyleLoaded()) return
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId]) {
+    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
+  }
+}
+
 function draftGeoJson() {
   return {
     type: 'FeatureCollection' as const,
@@ -474,8 +614,10 @@ function refreshMapRendering() {
   map.resize()
   syncHydraulicLayers()
   updateReportData()
+  updateRiverLevelData()
   updateDraftData()
   updateReportVisibility(props.reportsVisible)
+  updateRiverLevelVisibility(props.riverLevelsVisible)
   map.triggerRepaint()
 }
 
@@ -491,7 +633,7 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }
@@ -499,7 +641,10 @@ function syncHydraulicLayers() {
 function renderedSelectableLayerIds() {
   if (!map) return []
   const hydraulic = props.layers.flatMap(layer => styleIdsFor(layer.id)).filter(id => map?.getLayer(id))
-  return map.getLayer(reportPointLayerId) && props.reportsVisible ? [reportPointLayerId, ...hydraulic] : hydraulic
+  const specialLayers: string[] = []
+  if (map.getLayer(reportPointLayerId) && props.reportsVisible) specialLayers.push(reportPointLayerId)
+  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId)
+  return [...specialLayers, ...hydraulic]
 }
 
 function selectableFeaturesNear(point: { x: number; y: number }, tolerance: number) {
@@ -532,6 +677,17 @@ function featureInfo(feature: MapGeoJSONFeature) {
     }
   }
 
+  if (feature.source === riverLevelSourceId) {
+    return {
+      layerId: riverLevelSourceId,
+      layerLabel: String(properties.riverName ?? 'Nivel del río'),
+      color: String(properties.markerColor ?? '#0877ad'),
+      geometryType: feature.geometry.type,
+      sourceFile: String(properties.dataUrl ?? 'INA · Sistema de Información y Alerta Hidrológico'),
+      properties,
+    }
+  }
+
   const layerId = feature.source.replace('hydraulic-', '')
   const definition = props.layers.find(layer => layer.id === layerId)
   if (!definition?.source) return undefined
@@ -548,7 +704,9 @@ function featureInfo(feature: MapGeoJSONFeature) {
 
 watch(() => props.waterVisible, updateBaseVisibility)
 watch(() => props.reportsVisible, updateReportVisibility)
+watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
 watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), updateReportData)
+watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}`).join('|'), updateRiverLevelData)
 watch(() => props.reportLocation ? `${props.reportLocation.longitude}:${props.reportLocation.latitude}` : '', updateDraftData)
 watch(() => props.placingReport, placing => {
   if (map) map.getCanvas().style.cursor = placing ? 'crosshair' : ''
@@ -579,7 +737,8 @@ onMounted(async () => {
     updateBaseVisibility(props.waterVisible)
     syncHydraulicLayers()
     addCitizenReportLayers()
-    map?.fitBounds([[-60.77, -31.71], [-60.55, -31.55]], {
+    addRiverLevelLayers()
+    map?.fitBounds([[-60.79, -31.75], [-60.48, -31.54]], {
       padding: { top: 116, right: 24, bottom: 72, left: 24 },
       maxZoom: 12.15,
       duration: 0,
@@ -620,9 +779,12 @@ onMounted(async () => {
     }
 
     const feature = selectableFeaturesNear(event.point, 7)[0]
+    const featureCoordinates = feature?.geometry.type === 'Point'
+      ? feature.geometry.coordinates
+      : null
     emit('pointSelected', {
-      longitude: event.lngLat.lng,
-      latitude: event.lngLat.lat,
+      longitude: featureCoordinates?.[0] ?? event.lngLat.lng,
+      latitude: featureCoordinates?.[1] ?? event.lngLat.lat,
       feature: feature ? featureInfo(feature) : undefined,
     })
   })

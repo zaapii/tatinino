@@ -11,11 +11,11 @@ const open = defineModel<boolean>({ default: false })
       <p class="mt-4 text-sm leading-relaxed text-ink/70">Usá <strong>Capas</strong> para combinar cuencas, defensas, reservorios, drenajes y estaciones. Los datos pesados se descargan solo cuando los activás.</p>
       <div class="mt-4 space-y-2 text-xs leading-relaxed text-ink/64">
         <p><strong>Plano técnico 2025:</strong> geometrías convertidas desde el archivo CAD suministrado para esta maqueta.</p>
-        <p><strong>Situación actual:</strong> niveles, lluvias, pronósticos y alertas se incorporarán desde fuentes oficiales.</p>
-        <p><strong>Participación:</strong> “Cargá tu reclamo” permite marcar una ubicación, estimar el barrio y guardar el punto en el registro público. Toda carga ingresa sin validación oficial.</p>
+        <p><strong>Niveles de los ríos:</strong> las escalas de Paraná, Santa Fe y Salado muestran la última medición disponible del INA. Abrí cada marcador para comprobar su fecha y tendencia.</p>
+        <p><strong>Participación:</strong> “Cargá tu reclamo” permite marcar una ubicación y enviar información para revisión. Solo las cargas aprobadas aparecen en el mapa.</p>
       </div>
       <div class="mt-4 flex gap-3 rounded-xl bg-[#fff8ea] p-4"><TriangleAlert :size="19" class="mt-0.5 shrink-0 text-[#a66d13]"/><p class="text-xs leading-relaxed text-ink/68">Las coordenadas de origen fueron inferidas como POSGAR 2007 / Argentina 5. Solo se rotulan como “cota de fondo” las anotaciones con prefijo FC, CFC o FCa; las demás medidas permanecen sin clasificar. Estos datos sirven para explorar el plano, no para tomar decisiones de ingeniería.</p></div>
-      <p class="mt-4 border-t border-ink/10 pt-4 text-[11px] leading-relaxed text-ink/50">El mapa base está simplificado para priorizar calles y manzanas. Seleccioná una línea, punto, área o reclamo para consultar sus detalles.</p>
+      <p class="mt-4 border-t border-ink/10 pt-4 text-[11px] leading-relaxed text-ink/50">El mapa base está simplificado para priorizar calles y manzanas. Seleccioná una línea, escala, punto, área o reclamo para consultar sus detalles.</p>
     </section>
   </Transition>
 </template>
