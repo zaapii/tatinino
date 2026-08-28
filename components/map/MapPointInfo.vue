@@ -68,6 +68,24 @@ const detailRows = computed(() => {
     .filter(key => props.point.feature?.properties[key] !== undefined && props.point.feature?.properties[key] !== null && props.point.feature?.properties[key] !== '')
     .map(key => ({ key, label: propertyLabels[key] ?? key, value: props.point.feature!.properties[key] }))
 })
+
+function detailRowClass(key: string) {
+  if (key === 'alertLevelLabel') return 'bg-[#fff8e6]'
+  if (key === 'evacuationLevelLabel') return 'bg-[#fff5f5]'
+  return 'bg-white'
+}
+
+function detailLabelClass(key: string) {
+  if (key === 'alertLevelLabel') return 'text-[#a66d13]'
+  if (key === 'evacuationLevelLabel') return 'text-[#c83232]'
+  return 'text-ink/40'
+}
+
+function detailValueClass(key: string) {
+  if (key === 'alertLevelLabel') return 'font-semibold text-[#a66d13]'
+  if (key === 'evacuationLevelLabel') return 'font-semibold text-[#c83232]'
+  return 'text-ink/72'
+}
 </script>
 
 <template>
@@ -90,9 +108,9 @@ const detailRows = computed(() => {
       </div>
 
       <dl v-if="detailRows.length" class="mt-3 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
-        <div v-for="row in detailRows" :key="row.key" class="grid grid-cols-[110px_1fr] gap-3 px-3 py-2.5" :class="row.key === 'evacuationLevelLabel' ? 'bg-[#fff5f5]' : 'bg-white'">
-          <dt class="ui-label text-[8px]" :class="row.key === 'evacuationLevelLabel' ? 'text-[#c83232]' : 'text-ink/40'">{{ row.label }}</dt>
-          <dd class="break-words text-right font-mono text-[10px]" :class="row.key === 'evacuationLevelLabel' ? 'font-semibold text-[#c83232]' : 'text-ink/72'">{{ row.value }}</dd>
+        <div v-for="row in detailRows" :key="row.key" class="grid grid-cols-[110px_1fr] gap-3 px-3 py-2.5" :class="detailRowClass(row.key)">
+          <dt class="ui-label text-[8px]" :class="detailLabelClass(row.key)">{{ row.label }}</dt>
+          <dd class="break-words text-right font-mono text-[10px]" :class="detailValueClass(row.key)">{{ row.value }}</dd>
         </div>
       </dl>
 

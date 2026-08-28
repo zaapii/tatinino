@@ -27,6 +27,7 @@ const loadingSources = new Set<string>()
 const baseLayerIds: string[] = []
 let map: MapLibreMap | undefined
 let resizeObserver: ResizeObserver | undefined
+let resizeFrame: number | undefined
 
 const reportSourceId = 'citizen-reports'
 const reportHaloLayerId = 'citizen-reports-halo'
@@ -35,6 +36,7 @@ const riverLevelSourceId = 'river-levels'
 const riverLevelHaloLayerId = 'river-levels-halo'
 const riverLevelPointLayerId = 'river-levels-point'
 const riverLevelLabelLayerId = 'river-levels-label'
+const riverLevelAlertLabelLayerId = 'river-levels-alert-label'
 const riverLevelEvacuationLabelLayerId = 'river-levels-evacuation-label'
 const riverLevelReferenceLayerId = 'river-levels-reference-label'
 const draftSourceId = 'citizen-report-draft'
@@ -102,6 +104,7 @@ function riverReadingProperties(reading: RiverLevelReading) {
     lowWaterLevelLabel: reading.lowWaterLevel === null ? '' : levelLabel(reading.lowWaterLevel),
     alertLevelLabel: reading.alertLevel === null ? '' : levelLabel(reading.alertLevel),
     evacuationLevelLabel: reading.evacuationLevel === null ? 'Sin umbral oficial publicado' : levelLabel(reading.evacuationLevel),
+    alertMapLabel: reading.alertLevel === null ? 'Alerta s/d' : `Alerta ${levelLabel(reading.alertLevel)}`,
     evacuationMapLabel: reading.evacuationLevel === null ? 'Evac. s/d' : `Evac. ${levelLabel(reading.evacuationLevel)}`,
     sourceName: reading.sourceName,
     dataUrl: reading.dataUrl,
@@ -600,6 +603,30 @@ function addRiverLevelLayers() {
       },
     })
   }
+  if (!map.getLayer(riverLevelAlertLabelLayerId)) {
+    map.addLayer({
+      id: riverLevelAlertLabelLayerId,
+      source: riverLevelSourceId,
+      type: 'symbol',
+      minzoom: 9,
+      layout: {
+        visibility,
+        'text-field': ['get', 'alertMapLabel'],
+        'text-font': ['Open Sans Regular'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9.5, 14, 11],
+        'text-offset': [0, 4.55],
+        'text-anchor': 'top',
+        'text-padding': 4,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+      },
+      paint: {
+        'text-color': '#c98a17',
+        'text-halo-color': 'rgba(255, 255, 255, .98)',
+        'text-halo-width': 2,
+      },
+    })
+  }
   if (!map.getLayer(riverLevelEvacuationLabelLayerId)) {
     map.addLayer({
       id: riverLevelEvacuationLabelLayerId,
@@ -611,7 +638,7 @@ function addRiverLevelLayers() {
         'text-field': ['get', 'evacuationMapLabel'],
         'text-font': ['Open Sans Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9.5, 14, 11],
-        'text-offset': [0, 4.55],
+        'text-offset': [0, 6.15],
         'text-anchor': 'top',
         'text-padding': 4,
         'text-allow-overlap': true,
@@ -635,7 +662,7 @@ function updateRiverLevelData() {
 
 function updateRiverLevelVisibility(visible: boolean) {
   if (!map?.isStyleLoaded()) return
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
 }
@@ -760,7 +787,7 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }
@@ -846,7 +873,7 @@ watch(() => props.waterVisible, updateBaseVisibility)
 watch(() => props.reportsVisible, updateReportVisibility)
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
 watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), updateReportData)
-watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}:${reading.evacuationLevel}`).join('|'), updateRiverLevelData)
+watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}:${reading.alertLevel}:${reading.evacuationLevel}`).join('|'), updateRiverLevelData)
 watch(() => props.reportLocation ? `${props.reportLocation.longitude}:${props.reportLocation.latitude}` : '', updateDraftData)
 watch(() => props.placingReport, placing => {
   if (map) map.getCanvas().style.cursor = placing ? 'crosshair' : ''
@@ -930,13 +957,18 @@ onMounted(async () => {
   })
 
   resizeObserver = new ResizeObserver(() => {
-    requestAnimationFrame(() => map?.resize())
+    if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
+    resizeFrame = requestAnimationFrame(() => {
+      map?.resize()
+      resizeFrame = undefined
+    })
   })
   resizeObserver.observe(mapElement.value)
 })
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
+  if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
   map?.remove()
 })
 </script>
