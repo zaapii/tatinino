@@ -119,6 +119,10 @@ export function useAdminReports() {
     return reports
   }
 
+  async function fetchAllAdminReports() {
+    return fetchAdminReportsForExport({ status: 'all' })
+  }
+
   function subscribeToAdminReports(onChange: () => void) {
     const supabase = useSupabaseClient()
     const channel: RealtimeChannel = supabase
@@ -154,6 +158,7 @@ export function useAdminReports() {
   }
 
   return {
+    fetchAllAdminReports,
     fetchAdminReportCounts,
     fetchAdminReportsForExport,
     fetchAdminReportsPage,

@@ -37,6 +37,7 @@ export type RiverLevelReading = {
   id: string
   riverName: string
   stationName: string
+  mapLabel: string
   seriesId: number
   point: MapPoint
   level: number | null

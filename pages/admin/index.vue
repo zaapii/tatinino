@@ -2,6 +2,7 @@
 import {
   Ban,
   Check,
+  ChartNoAxesCombined,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -260,6 +261,7 @@ async function exportCsv() {
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <p v-if="lastUpdated" class="mr-1 text-[11px] text-white/42">Actualizado {{ timeFormatter.format(lastUpdated) }}</p>
+            <NuxtLink to="/admin/metricas" class="inline-flex h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 text-xs font-semibold text-white transition hover:bg-white/14"><ChartNoAxesCombined :size="15" /> Ver métricas</NuxtLink>
             <button class="inline-flex h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 text-xs font-semibold text-white transition hover:bg-white/14 disabled:opacity-45" :disabled="refreshing" @click="loadReports(true)"><RefreshCw :size="15" :class="refreshing && 'animate-spin'" /> Actualizar</button>
             <button class="inline-flex h-11 items-center gap-2 rounded-xl bg-river px-4 text-xs font-semibold text-white shadow-lg shadow-river/20 transition hover:bg-river-ink disabled:opacity-45" :disabled="!totalReports || exporting" @click="exportCsv"><LoaderCircle v-if="exporting" :size="15" class="animate-spin" /><Download v-else :size="15" /> {{ exporting ? 'Preparando…' : 'Exportar resultados' }}</button>
           </div>

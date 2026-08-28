@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { BarChart, HeatmapChart, PieChart } from 'echarts/charts'
+import { BarChart, HeatmapChart, LineChart, PieChart } from 'echarts/charts'
 import {
   AriaComponent,
+  DataZoomComponent,
   GridComponent,
   LegendComponent,
   TooltipComponent,
@@ -15,9 +16,11 @@ use([
   AriaComponent,
   BarChart,
   CanvasRenderer,
+  DataZoomComponent,
   GridComponent,
   HeatmapChart,
   LegendComponent,
+  LineChart,
   PieChart,
   TooltipComponent,
   VisualMapComponent,

@@ -16,7 +16,7 @@ type RiverStationDefinition = Omit<
 >
 
 const INA_DATA_BASE_URL = 'https://alerta.ina.gob.ar/pub/datos/datos'
-const CACHE_KEY = 'santa-fe-river-levels-v1'
+const CACHE_KEY = 'santa-fe-river-levels-v3'
 const CACHE_DURATION_MS = 30 * 60 * 1000
 const STALE_AFTER_MS = 72 * 60 * 60 * 1000
 const LOOKBACK_DAYS = 45
@@ -26,6 +26,7 @@ const stations: RiverStationDefinition[] = [
     id: 'parana',
     riverName: 'Río Paraná',
     stationName: 'Paraná · Túnel Subfluvial',
+    mapLabel: 'Túnel',
     seriesId: 29,
     point: { latitude: -31.7182378629681, longitude: -60.5225697750899 },
     lowWaterLevel: 1.61,
@@ -37,6 +38,7 @@ const stations: RiverStationDefinition[] = [
     id: 'santa-fe',
     riverName: 'Río Santa Fe',
     stationName: 'Puerto Santa Fe · Dique II',
+    mapLabel: 'Puerto',
     seriesId: 30,
     point: { latitude: -31.6514772196376, longitude: -60.7002319185745 },
     lowWaterLevel: 2,
@@ -45,15 +47,40 @@ const stations: RiverStationDefinition[] = [
     sourceName: 'INA · Prefectura Naval Argentina',
   },
   {
-    id: 'salado',
+    id: 'salado-santo-tome',
     riverName: 'Río Salado',
     stationName: 'Santo Tomé',
+    mapLabel: 'Santo Tomé',
     seriesId: 3044,
     point: { latitude: -31.667601, longitude: -60.752233 },
     lowWaterLevel: null,
     alertLevel: 4.7,
     evacuationLevel: null,
     sourceName: 'INA · Red Hidrológica Nacional · FICH',
+  },
+  {
+    id: 'salado-recreo',
+    riverName: 'Río Salado',
+    stationName: 'Recreo · RP 70',
+    mapLabel: 'Recreo',
+    seriesId: 103,
+    point: { latitude: -31.4912222222222, longitude: -60.7805555555556 },
+    lowWaterLevel: null,
+    alertLevel: 4.7,
+    evacuationLevel: null,
+    sourceName: 'INA · Red Hidrológica Nacional',
+  },
+  {
+    id: 'colastine-rn-168',
+    riverName: 'Río Colastiné',
+    stationName: 'Colastiné · RN 168',
+    mapLabel: 'RN 168',
+    seriesId: 8313,
+    point: { latitude: -31.6611111111111, longitude: -60.6019444444444 },
+    lowWaterLevel: null,
+    alertLevel: null,
+    evacuationLevel: null,
+    sourceName: 'INA · Red Hidrológica Nacional (SAT)',
   },
 ]
 

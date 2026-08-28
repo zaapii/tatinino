@@ -10,6 +10,7 @@ const emit = defineEmits<{
 const isCitizenReport = computed(() => props.point.feature?.layerId === 'citizen-reports')
 const isRenabapNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-neighborhoods')
 const isRiverLevel = computed(() => props.point.feature?.layerId === 'river-levels')
+const isRiverReference = computed(() => isRiverLevel.value && props.point.feature?.properties.isRiverReference === true)
 
 const geometryLabels: Record<string, string> = {
   Point: 'Punto',
@@ -65,7 +66,7 @@ const detailRows = computed(() => {
       : ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
   return preferredKeys
     .filter(key => props.point.feature?.properties[key] !== undefined && props.point.feature?.properties[key] !== null && props.point.feature?.properties[key] !== '')
-    .map(key => ({ label: propertyLabels[key] ?? key, value: props.point.feature!.properties[key] }))
+    .map(key => ({ key, label: propertyLabels[key] ?? key, value: props.point.feature!.properties[key] }))
 })
 </script>
 
@@ -85,13 +86,13 @@ const detailRows = computed(() => {
         <Waves v-else-if="isRiverLevel" :size="18" class="shrink-0"/>
         <LandPlot v-else-if="isRenabapNeighborhood" :size="18" class="shrink-0"/>
         <DraftingCompass v-else :size="18" class="shrink-0"/>
-        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Registro público' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isCitizenReport ? 'Publicación revisada por administración' : isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
+        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Registro público' : isRiverReference ? 'Referencia repetida sobre el cauce' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isCitizenReport ? 'Publicación revisada por administración' : isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
       </div>
 
       <dl v-if="detailRows.length" class="mt-3 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
-        <div v-for="row in detailRows" :key="row.label" class="grid grid-cols-[110px_1fr] gap-3 bg-white px-3 py-2.5">
-          <dt class="ui-label text-[8px] text-ink/40">{{ row.label }}</dt>
-          <dd class="break-words text-right font-mono text-[10px] text-ink/72">{{ row.value }}</dd>
+        <div v-for="row in detailRows" :key="row.key" class="grid grid-cols-[110px_1fr] gap-3 px-3 py-2.5" :class="row.key === 'evacuationLevelLabel' ? 'bg-[#fff5f5]' : 'bg-white'">
+          <dt class="ui-label text-[8px]" :class="row.key === 'evacuationLevelLabel' ? 'text-[#c83232]' : 'text-ink/40'">{{ row.label }}</dt>
+          <dd class="break-words text-right font-mono text-[10px]" :class="row.key === 'evacuationLevelLabel' ? 'font-semibold text-[#c83232]' : 'text-ink/72'">{{ row.value }}</dd>
         </div>
       </dl>
 
@@ -99,6 +100,7 @@ const detailRows = computed(() => {
       <p v-else-if="point.feature.layerId === 'elevation'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> El significado y la unidad de esta anotación no están clasificados. Se conserva únicamente para revisar el plano original.</p>
       <p v-else-if="isRenabapNeighborhood" class="mt-3 flex gap-2 rounded-xl bg-[#b64f7a]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#8d3158]"/> La delimitación y la cantidad de familias corresponden al archivo RENABAP incorporado. No representan límites catastrales ni un relevamiento en tiempo real.</p>
       <p v-else-if="isCitizenReport" class="mt-3 flex gap-2 rounded-xl bg-[#d94841]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#b9312b]"/> Este punto fue cargado por la comunidad y revisado antes de publicarse. Su aprobación no implica que el problema haya sido resuelto por un organismo oficial.</p>
+      <p v-else-if="isRiverReference" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Esta etiqueta repite el dato de la estación indicada. No es una medición en esta ubicación ni una estimación de la altura local.</p>
       <p v-else-if="isRiverLevel && point.feature.properties.isStale" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Esta estación presenta demora. Se muestra la última medición disponible y su fecha, pero no debe interpretarse como un valor actual.</p>
       <p v-else-if="isRiverLevel" class="mt-3 flex gap-2 rounded-xl bg-river/8 p-3 text-[11px] leading-relaxed text-ink/65"><Waves :size="15" class="mt-0.5 shrink-0 text-river"/> Dato oficial de referencia. La escala no reemplaza las alertas ni las indicaciones de los organismos de emergencia.</p>
       <a v-if="isRiverLevel && point.feature.properties.dataUrl" :href="String(point.feature.properties.dataUrl)" target="_blank" rel="noopener noreferrer" class="mt-3 flex items-center justify-between rounded-xl border border-river/15 bg-river/5 px-3 py-2.5 text-[10px] font-semibold text-river transition hover:bg-river/10">Ver serie oficial del INA <ArrowUpRight :size="14"/></a>
