@@ -61,7 +61,7 @@ La ruta `/proyecto` presenta el propósito, alcance y rol institucional de la in
 
 ## Publicaciones editoriales
 
-La sección `/novedades` utiliza un modelo de contenido basado en bloques definido en `types/content.ts`. Los ejemplos viven temporalmente en `composables/useArticles.ts` y pueden reemplazarse más adelante por la salida de un CMS o editor WYSIWYG sin cambiar las plantillas.
+La sección `/novedades` utiliza un modelo de contenido basado en bloques definido en `types/content.ts`. Los artículos se guardan en la tabla `articles` de Supabase y se cargan manualmente desde `/admin/articulos`. La lectura pública solo expone filas publicadas; los borradores y las operaciones de escritura están protegidos por las políticas RLS y la lista `admin_users`.
 
 Bloques disponibles en el MVP:
 

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ArrowDown, CircleCheck, Rss } from 'lucide-vue-next'
+import { ArrowDown, CircleCheck, DatabaseZap, Rss } from 'lucide-vue-next'
 
 useSeoMeta({
   title: 'Novedades',
   description: 'Notas, guías y explicaciones sobre información hídrica, territorio y prevención en Santa Fe.',
 })
 
-const { articles } = useArticles()
-const featured = articles[0]!
-const secondary = articles.slice(1)
+const { fetchArticles } = useArticles()
+const { data: articles, error, refresh } = await useAsyncData('published-articles', () => fetchArticles(), {
+  default: () => [],
+})
+const featured = computed(() => articles.value[0])
+const secondary = computed(() => articles.value.slice(1))
+
+onMounted(() => refresh())
 </script>
 
 <template>
@@ -20,7 +25,7 @@ const secondary = articles.slice(1)
       <div class="mx-auto max-w-6xl">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <p class="ui-label flex items-center gap-2 text-river"><Rss :size="14"/> Publicación pública</p>
-          <p class="ui-label text-ink/38">Archivo abierto · Edición de muestra</p>
+          <p class="ui-label text-ink/38">Archivo abierto · Actualización editorial</p>
         </div>
         <div class="mt-16 grid items-end gap-10 lg:mt-24 lg:grid-cols-[1fr_.58fr] lg:gap-24">
           <div>
@@ -38,14 +43,22 @@ const secondary = articles.slice(1)
     <div id="ultima-edicion" class="px-6 py-14 sm:px-10 sm:py-20 lg:px-14 lg:py-24">
       <div class="mx-auto max-w-6xl">
         <div class="mb-12 flex flex-wrap items-center justify-between gap-5 border-b border-ink/10 pb-5">
-          <div><p class="ui-label text-river">Última edición</p><p class="mt-1 text-sm text-ink/48">Tres ejemplos preparados para una publicación periódica</p></div>
-          <div class="flex items-center gap-2 rounded-full bg-mist px-3 py-2 text-[11px] text-ink/58"><CircleCheck :size="14" class="text-river"/> Contenido de demostración</div>
+          <div><p class="ui-label text-river">Última edición</p><p class="mt-1 text-sm text-ink/48">Publicaciones ordenadas por su fecha editorial</p></div>
+          <div class="flex items-center gap-2 rounded-full bg-mist px-3 py-2 text-[11px] text-ink/58"><CircleCheck :size="14" class="text-river"/> Archivo actualizado</div>
         </div>
 
-        <NewsArticleCard :article="featured" featured />
+        <div v-if="error" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+          No se pudieron cargar las publicaciones. Volvé a intentar en unos minutos.
+        </div>
 
-        <div class="my-16 flex items-center gap-4 sm:my-20"><span class="ui-label shrink-0 text-ink/40">También en esta edición</span><span class="h-px w-full bg-ink/10"/></div>
-        <div class="grid gap-14 md:grid-cols-2 md:gap-8 lg:gap-12">
+        <div v-else-if="!featured" class="grid min-h-72 place-items-center rounded-2xl border border-dashed border-ink/20 bg-white/55 p-8 text-center">
+          <div><DatabaseZap :size="26" class="mx-auto text-river"/><h2 class="mt-4 text-xl font-semibold">El archivo está listo para su primera nota</h2><p class="mt-2 text-sm text-ink/50">Las publicaciones cargadas desde la administración aparecerán acá.</p></div>
+        </div>
+
+        <NewsArticleCard v-else :article="featured" featured />
+
+        <div v-if="secondary.length" class="my-16 flex items-center gap-4 sm:my-20"><span class="ui-label shrink-0 text-ink/40">También en esta edición</span><span class="h-px w-full bg-ink/10"/></div>
+        <div v-if="secondary.length" class="grid gap-14 md:grid-cols-2 md:gap-8 lg:gap-12">
           <NewsArticleCard v-for="article in secondary" :key="article.slug" :article="article" />
         </div>
 

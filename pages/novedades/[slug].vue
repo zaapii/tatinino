@@ -2,20 +2,31 @@
 import { ArrowLeft, Clock3, CircleCheck, RotateCcw, ShieldCheck } from 'lucide-vue-next'
 
 const route = useRoute()
-const { articles, getArticleBySlug } = useArticles()
-const article = getArticleBySlug(String(route.params.slug))
+const { fetchArticleBySlug, fetchArticles } = useArticles()
+const slug = String(route.params.slug)
+const { data, refresh } = await useAsyncData(`article-${slug}`, async () => {
+  const [article, articles] = await Promise.all([
+    fetchArticleBySlug(slug),
+    fetchArticles(),
+  ])
+  return { article, articles }
+})
+const initialArticle = data.value?.article
 
-if (!article) {
+if (!initialArticle) {
   throw createError({ statusCode: 404, statusMessage: 'La publicación no existe' })
 }
 
-const related = articles.filter(item => item.slug !== article.slug).slice(0, 2)
+const article = computed(() => data.value?.article ?? initialArticle)
+const related = computed(() => (data.value?.articles ?? []).filter(item => item.slug !== article.value.slug).slice(0, 2))
+
+onMounted(() => refresh())
 
 useSeoMeta({
-  title: article.title,
-  description: article.excerpt,
-  ogTitle: article.title,
-  ogDescription: article.excerpt,
+  title: () => article.value?.title ?? 'Publicación',
+  description: () => article.value?.excerpt ?? '',
+  ogTitle: () => article.value?.title ?? 'Publicación',
+  ogDescription: () => article.value?.excerpt ?? '',
 })
 </script>
 
@@ -48,7 +59,7 @@ useSeoMeta({
           <ul class="mt-5 divide-y divide-ink/10 border-y border-ink/10">
             <li v-for="item in article.summary" :key="item" class="flex gap-3 py-4 text-xs leading-relaxed text-ink/62"><CircleCheck :size="16" class="mt-0.5 shrink-0 text-river"/>{{ item }}</li>
           </ul>
-          <div class="mt-6 rounded-xl bg-mist p-4"><p class="flex items-center gap-2 text-xs font-semibold"><ShieldCheck :size="15" class="text-river"/> Contenido de muestra</p><p class="mt-2 text-[11px] leading-relaxed text-ink/50">Esta nota demuestra el formato editorial. No constituye una comunicación oficial.</p></div>
+          <div class="mt-6 rounded-xl bg-mist p-4"><p class="flex items-center gap-2 text-xs font-semibold"><ShieldCheck :size="15" class="text-river"/> Publicación editorial</p><p class="mt-2 text-[11px] leading-relaxed text-ink/50">Contenido publicado y conservado en el archivo público del proyecto.</p></div>
         </aside>
         <div class="max-w-3xl">
           <p class="mb-8 ui-label text-ink/38">{{ article.kicker }}</p>

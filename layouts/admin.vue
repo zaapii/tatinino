@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ChartNoAxesCombined, ExternalLink, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, ShieldCheck, Waves } from 'lucide-vue-next'
+import { ArrowLeft, ChartNoAxesCombined, ExternalLink, ListChecks, LogOut, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck, Waves } from 'lucide-vue-next'
 
 const route = useRoute()
 const email = ref('')
@@ -97,6 +97,19 @@ async function signOut() {
           <span v-if="!sidebarCollapsed" class="whitespace-nowrap">Moderar reclamos</span>
         </NuxtLink>
         <NuxtLink
+          to="/admin/articulos"
+          class="mt-1 flex items-center rounded-xl py-3 text-sm font-semibold transition"
+          :class="[
+            route.path.startsWith('/admin/articulos') ? 'bg-white text-ink' : 'text-white/65 hover:bg-white/8 hover:text-white',
+            sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
+          ]"
+          :title="sidebarCollapsed ? 'Artículos' : undefined"
+          :aria-label="sidebarCollapsed ? 'Administrar artículos' : undefined"
+        >
+          <Newspaper :size="18" class="shrink-0" aria-hidden="true" />
+          <span v-if="!sidebarCollapsed" class="whitespace-nowrap">Artículos</span>
+        </NuxtLink>
+        <NuxtLink
           to="/admin/metricas"
           class="mt-1 flex items-center rounded-xl py-3 text-sm font-semibold transition"
           :class="[
@@ -154,10 +167,11 @@ async function signOut() {
       <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-ink/10 bg-white/90 px-4 backdrop-blur-xl lg:hidden">
         <NuxtLink to="/admin" class="flex items-center gap-2.5">
           <span class="grid size-8 place-items-center rounded-full bg-ink text-river-light"><Waves :size="17" /></span>
-          <span><span class="ui-label block text-ink/45">Administración</span><span class="text-sm font-semibold">Reclamos hídricos</span></span>
+          <span><span class="ui-label block text-ink/45">Administración</span><span class="text-sm font-semibold">Información hídrica</span></span>
         </NuxtLink>
         <div class="flex items-center gap-1">
           <NuxtLink to="/admin" class="grid size-9 place-items-center rounded-lg text-ink/45 transition hover:bg-mist hover:text-ink" aria-label="Moderar reclamos"><ListChecks :size="17" /></NuxtLink>
+          <NuxtLink to="/admin/articulos" class="grid size-9 place-items-center rounded-lg text-ink/45 transition hover:bg-mist hover:text-ink" aria-label="Administrar artículos"><Newspaper :size="17" /></NuxtLink>
           <NuxtLink to="/admin/metricas" class="grid size-9 place-items-center rounded-lg text-ink/45 transition hover:bg-mist hover:text-ink" aria-label="Ver métricas"><ChartNoAxesCombined :size="17" /></NuxtLink>
           <button class="grid size-9 place-items-center rounded-lg border border-ink/10 bg-white" aria-label="Cerrar sesión" @click="signOut"><LogOut :size="17" /></button>
         </div>
