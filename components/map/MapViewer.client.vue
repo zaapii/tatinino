@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
 import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
+import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
 
 const emit = defineEmits<{
   pointSelected: [selection: MapSelection]
@@ -159,14 +160,45 @@ function riverReferenceColorExpression() {
 
 type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'other'
 
-const reportIcons: Array<{ id: string, topic: string, kind: ReportIconKind }> = [
-  { id: 'report-marker-storm-drain', topic: 'Boca de tormenta obstruida', kind: 'storm-drain' },
-  { id: 'report-marker-waste', topic: 'Basura o residuos', kind: 'waste' },
-  { id: 'report-marker-flooded-street', topic: 'Calle anegada', kind: 'flooded-street' },
-  { id: 'report-marker-drainage', topic: 'Canal o desagüe', kind: 'drainage' },
-  { id: 'report-marker-defense', topic: 'Defensa o terraplén', kind: 'defense' },
-  { id: 'report-marker-other', topic: 'Otro', kind: 'other' },
-]
+const reportIconKinds: Record<string, ReportIconKind> = {
+  'Boca de tormenta obstruida': 'storm-drain',
+  'Basura o residuos': 'waste',
+  'Calle anegada': 'flooded-street',
+  'Canal o desagüe': 'drainage',
+  'Defensa o terraplén': 'defense',
+  'Otro': 'other',
+}
+
+const reportIcons: Array<{ id: string, topic: string, kind: ReportIconKind, severity: CitizenReportSeverity }> = citizenReportCategories.map(category => ({
+  id: `report-marker-${reportIconKinds[category.topic]}-${category.severity}`,
+  topic: category.topic,
+  kind: reportIconKinds[category.topic] ?? 'other',
+  severity: category.severity,
+}))
+
+const fallbackReportIconId = 'report-marker-other-medio'
+
+function reportMarkerColor(topic: string) {
+  return citizenReportSeverities[citizenReportSeverity(topic)].color
+}
+
+function reportSeverityLabel(topic: string) {
+  return citizenReportSeverities[citizenReportSeverity(topic)].label
+}
+
+function reportGlyphColor(severity: CitizenReportSeverity) {
+  return citizenReportSeverities[severity].glyphColor
+}
+
+function reportFillColor(severity: CitizenReportSeverity) {
+  return citizenReportSeverities[severity].color
+}
+
+const reportSeverityColorExpression = [
+  'match', ['get', 'severity'],
+  'grave', citizenReportSeverities.grave.color,
+  citizenReportSeverities.medio.color,
+] as unknown as ExpressionSpecification
 
 function drawWave(context: CanvasRenderingContext2D, y: number) {
   context.beginPath()
@@ -176,9 +208,9 @@ function drawWave(context: CanvasRenderingContext2D, y: number) {
   context.stroke()
 }
 
-function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind) {
-  context.strokeStyle = '#9f302d'
-  context.fillStyle = '#9f302d'
+function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind, glyphColor: string) {
+  context.strokeStyle = glyphColor
+  context.fillStyle = glyphColor
   context.lineWidth = 2
   context.lineCap = 'round'
   context.lineJoin = 'round'
@@ -258,7 +290,7 @@ function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind
   context.fill()
 }
 
-function createReportIcon(kind: ReportIconKind) {
+function createReportIcon(kind: ReportIconKind, severity: CitizenReportSeverity) {
   const pixelRatio = 2
   const width = 46
   const height = 54
@@ -284,7 +316,7 @@ function createReportIcon(kind: ReportIconKind) {
   context.fill()
 
   context.shadowColor = 'transparent'
-  context.fillStyle = '#d94841'
+  context.fillStyle = reportFillColor(severity)
   context.beginPath()
   context.arc(23, 22, 18, 0, Math.PI * 2)
   context.fill()
@@ -299,7 +331,7 @@ function createReportIcon(kind: ReportIconKind) {
   context.beginPath()
   context.arc(23, 22, 13.5, 0, Math.PI * 2)
   context.fill()
-  drawReportGlyph(context, kind)
+  drawReportGlyph(context, kind, reportGlyphColor(severity))
 
   return { image: context.getImageData(0, 0, canvas.width, canvas.height), pixelRatio }
 }
@@ -308,7 +340,7 @@ function addReportIcons() {
   if (!map) return
   for (const definition of reportIcons) {
     if (map.hasImage(definition.id)) continue
-    const { image, pixelRatio } = createReportIcon(definition.kind)
+    const { image, pixelRatio } = createReportIcon(definition.kind, definition.severity)
     map.addImage(definition.id, image, { pixelRatio })
   }
 }
@@ -316,7 +348,7 @@ function addReportIcons() {
 const reportIconExpression = [
   'match', ['get', 'topic'],
   ...reportIcons.flatMap(definition => [definition.topic, definition.id]),
-  'report-marker-other',
+  fallbackReportIconId,
 ] as unknown as ExpressionSpecification
 
 const sourceIdFor = (id: string) => `hydraulic-${id}`
@@ -370,6 +402,9 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
 
   const visibility: 'visible' | 'none' = definition.enabled ? 'visible' : 'none'
   const shared = { source: sourceId, minzoom: source.minZoom, layout: { visibility } }
+  const lineGeometryFilter: FilterSpecification = definition.id === 'reservoirs'
+    ? ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]]
+    : ['==', ['geometry-type'], 'LineString']
 
   if (!map.getLayer(styleIdsFor(definition.id)[0])) {
     map.addLayer({
@@ -390,7 +425,7 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
       ...shared,
       id: styleIdsFor(definition.id)[1],
       type: 'line',
-      filter: ['==', ['geometry-type'], 'LineString'],
+      filter: lineGeometryFilter,
       paint: {
         'line-color': source.color,
         'line-opacity': 0.9,
@@ -486,6 +521,9 @@ function reportGeoJson() {
         statusLabel: reportStatusLabels[report.status],
         photoName: report.photoName ?? '',
         photoUrl: report.photoUrl ?? '',
+        severity: citizenReportSeverity(report.topic),
+        severityLabel: reportSeverityLabel(report.topic),
+        markerColor: reportMarkerColor(report.topic),
       },
     })),
   }
@@ -694,7 +732,7 @@ function addCitizenReportLayers() {
       layout: { visibility: props.reportsVisible ? 'visible' : 'none' },
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 16, 16, 23],
-        'circle-color': '#d94841',
+        'circle-color': reportSeverityColorExpression,
         'circle-opacity': 0.2,
         'circle-blur': 0.35,
       },
@@ -824,7 +862,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
     return {
       layerId: reportSourceId,
       layerLabel: String(properties.topic ?? 'Reclamo ciudadano'),
-      color: '#d94841',
+      color: String(properties.markerColor ?? citizenReportSeverities.medio.color),
       geometryType: feature.geometry.type,
       sourceFile: 'Registro público de reclamos ciudadanos',
       properties,

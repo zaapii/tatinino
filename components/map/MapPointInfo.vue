@@ -8,6 +8,7 @@ const emit = defineEmits<{
   report: [point: MapPoint]
 }>()
 const isCitizenReport = computed(() => props.point.feature?.layerId === 'citizen-reports')
+const isGraveReport = computed(() => isCitizenReport.value && props.point.feature?.properties.severity === 'grave')
 const isRenabapNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-neighborhoods')
 const isRiverLevel = computed(() => props.point.feature?.layerId === 'river-levels')
 const isRiverReference = computed(() => isRiverLevel.value && props.point.feature?.properties.isRiverReference === true)
@@ -35,6 +36,7 @@ const propertyLabels: Record<string, string> = {
   neighborhood: 'Barrio',
   createdAt: 'Carga',
   statusLabel: 'Estado',
+  severityLabel: 'Severidad',
   photoName: 'Foto',
   photoUrl: 'Imagen',
   barrio: 'Barrio popular',
@@ -58,7 +60,7 @@ const propertyLabels: Record<string, string> = {
 const detailRows = computed(() => {
   if (!props.point.feature) return []
   const preferredKeys = isCitizenReport.value
-    ? ['neighborhood', 'description', 'createdAt', 'statusLabel', 'photoName']
+    ? ['severityLabel', 'neighborhood', 'description', 'createdAt', 'statusLabel', 'photoName']
     : isRiverLevel.value
       ? ['stationName', 'levelLabel', 'observedAtLabel', 'trendLabel', 'riverStatusLabel', 'lowWaterLevelLabel', 'alertLevelLabel', 'evacuationLevelLabel', 'sourceName']
     : isRenabapNeighborhood.value
@@ -70,18 +72,24 @@ const detailRows = computed(() => {
 })
 
 function detailRowClass(key: string) {
+  if (key === 'severityLabel' && props.point.feature?.properties.severity === 'grave') return 'bg-[#fff5f5]'
+  if (key === 'severityLabel') return 'bg-[#fff9e8]'
   if (key === 'alertLevelLabel') return 'bg-[#fff8e6]'
   if (key === 'evacuationLevelLabel') return 'bg-[#fff5f5]'
   return 'bg-white'
 }
 
 function detailLabelClass(key: string) {
+  if (key === 'severityLabel' && props.point.feature?.properties.severity === 'grave') return 'text-[#b9312b]'
+  if (key === 'severityLabel') return 'text-[#8a650c]'
   if (key === 'alertLevelLabel') return 'text-[#a66d13]'
   if (key === 'evacuationLevelLabel') return 'text-[#c83232]'
   return 'text-ink/40'
 }
 
 function detailValueClass(key: string) {
+  if (key === 'severityLabel' && props.point.feature?.properties.severity === 'grave') return 'font-semibold text-[#b9312b]'
+  if (key === 'severityLabel') return 'font-semibold text-[#8a650c]'
   if (key === 'alertLevelLabel') return 'font-semibold text-[#a66d13]'
   if (key === 'evacuationLevelLabel') return 'font-semibold text-[#c83232]'
   return 'text-ink/72'
@@ -99,12 +107,12 @@ function detailValueClass(key: string) {
     </header>
 
     <div v-if="point.feature" class="mt-4">
-      <div class="flex items-center gap-3 rounded-xl p-3.5 text-white" :style="{ backgroundColor: point.feature.color }">
+      <div class="flex items-center gap-3 rounded-xl p-3.5" :class="isCitizenReport && !isGraveReport ? 'text-ink' : 'text-white'" :style="{ backgroundColor: point.feature.color }">
         <MessageSquareWarning v-if="isCitizenReport" :size="18" class="shrink-0"/>
         <Waves v-else-if="isRiverLevel" :size="18" class="shrink-0"/>
         <LandPlot v-else-if="isRenabapNeighborhood" :size="18" class="shrink-0"/>
         <DraftingCompass v-else :size="18" class="shrink-0"/>
-        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Registro público' : isRiverReference ? 'Referencia repetida sobre el cauce' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isCitizenReport ? 'Publicación revisada por administración' : isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
+        <div><p class="text-xs font-semibold">{{ isCitizenReport ? 'Reclamo ciudadano · Registro público' : isRiverReference ? 'Referencia repetida sobre el cauce' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px]" :class="isCitizenReport && !isGraveReport ? 'text-ink/65' : 'text-white/75'">{{ isCitizenReport ? 'Publicación revisada por administración' : isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
       </div>
 
       <dl v-if="detailRows.length" class="mt-3 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
@@ -117,7 +125,7 @@ function detailValueClass(key: string) {
       <p v-if="point.feature.layerId === 'conduit-elevations'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Es una cota de fondo de conducto inferida por el prefijo FC del plano. No representa la altura de la calle ni del terreno.</p>
       <p v-else-if="point.feature.layerId === 'elevation'" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> El significado y la unidad de esta anotación no están clasificados. Se conserva únicamente para revisar el plano original.</p>
       <p v-else-if="isRenabapNeighborhood" class="mt-3 flex gap-2 rounded-xl bg-[#b64f7a]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#8d3158]"/> La delimitación y la cantidad de familias corresponden al archivo RENABAP incorporado. No representan límites catastrales ni un relevamiento en tiempo real.</p>
-      <p v-else-if="isCitizenReport" class="mt-3 flex gap-2 rounded-xl bg-[#d94841]/8 p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#b9312b]"/> Este punto fue cargado por la comunidad y revisado antes de publicarse. Su aprobación no implica que el problema haya sido resuelto por un organismo oficial.</p>
+      <p v-else-if="isCitizenReport" class="mt-3 flex gap-2 rounded-xl p-3 text-[11px] leading-relaxed text-ink/65" :class="isGraveReport ? 'bg-[#d94841]/8' : 'bg-[#e0ad2f]/12'"><TriangleAlert :size="15" class="mt-0.5 shrink-0" :class="isGraveReport ? 'text-[#b9312b]' : 'text-[#8a650c]'"/> Este punto fue cargado por la comunidad y revisado antes de publicarse. Su aprobación no implica que el problema haya sido resuelto por un organismo oficial.</p>
       <p v-else-if="isRiverReference" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Esta etiqueta repite el dato de la estación indicada. No es una medición en esta ubicación ni una estimación de la altura local.</p>
       <p v-else-if="isRiverLevel && point.feature.properties.isStale" class="mt-3 flex gap-2 rounded-xl bg-[#fff8ea] p-3 text-[11px] leading-relaxed text-ink/65"><TriangleAlert :size="15" class="mt-0.5 shrink-0 text-[#a66d13]"/> Esta estación presenta demora. Se muestra la última medición disponible y su fecha, pero no debe interpretarse como un valor actual.</p>
       <p v-else-if="isRiverLevel" class="mt-3 flex gap-2 rounded-xl bg-river/8 p-3 text-[11px] leading-relaxed text-ink/65"><Waves :size="15" class="mt-0.5 shrink-0 text-river"/> Dato oficial de referencia. La escala no reemplaza las alertas ni las indicaciones de los organismos de emergencia.</p>

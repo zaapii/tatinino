@@ -26,11 +26,11 @@ export function useMapLayers() {
     { id: 'historic', label: 'Antecedentes de anegamiento', description: 'Registros históricos documentados', enabled: false, status: 'soon', group: 'territory' },
     {
       id: 'defenses', label: 'Terraplenes y defensas', description: 'Trazado de la infraestructura de protección hídrica', enabled: true, status: 'available', group: 'protection',
-      source: { file: 'defensas.geojson', featureCount: 642, color: '#b75e37', minZoom: 9.5, lineWidth: 2.8 },
+      source: { file: 'defensas.geojson', featureCount: 642, color: '#b75e37', minZoom: 9.5, lineWidth: 5.6 },
     },
     {
       id: 'reservoirs', label: 'Reservorios', description: 'Áreas y perímetros destinados a almacenamiento y regulación', enabled: true, status: 'available', group: 'protection',
-      source: { file: 'reservorios.geojson', featureCount: 374, color: '#237b9d', minZoom: 10.5, lineWidth: 1.5, fillOpacity: 0.18 },
+      source: { file: 'reservorios.geojson', featureCount: 374, color: '#237b9d', minZoom: 10.5, lineWidth: 2.2, fillOpacity: 0.52 },
     },
     {
       id: 'channels', label: 'Canales', description: 'Canales abiertos y canales revestidos a cielo abierto', enabled: true, status: 'available', group: 'protection',
@@ -68,7 +68,7 @@ export function useMapLayers() {
     { id: 'river-levels', label: 'Niveles de los ríos', description: 'Escalas oficiales de Paraná, Santa Fe, Salado y Colastiné; el valor se repite sobre el cauce como referencia de su estación', enabled: true, status: 'active', group: 'current', color: '#0877ad' },
     { id: 'rainfall', label: 'Precipitaciones y pronósticos', description: 'Información meteorológica actualizada', enabled: false, status: 'soon', group: 'current' },
     { id: 'alerts', label: 'Alertas oficiales', description: 'Comunicados meteorológicos e hidrológicos', enabled: false, status: 'soon', group: 'current' },
-    { id: 'citizen-reports', label: 'Reclamos ciudadanos', description: 'Puntos cargados por la comunidad y aprobados para su publicación por el equipo administrador', enabled: true, status: 'available', group: 'community', color: '#d94841' },
+    { id: 'citizen-reports', label: 'Reclamos ciudadanos', description: 'Puntos aprobados para publicación, sectorizados por gravedad: grave en rojo y medio en amarillo', enabled: true, status: 'available', group: 'community', color: '#d94841' },
   ])
 
   function toggleLayer(id: string) {

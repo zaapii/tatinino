@@ -43,7 +43,11 @@ const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(cou
                 </button>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start justify-between gap-2">
-                    <p class="flex min-w-0 items-center gap-2 text-sm font-semibold leading-snug"><span v-if="layer.source || layer.color" class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: layer.source?.color ?? layer.color }"/>{{ layer.label }}</p>
+                    <p class="flex min-w-0 items-center gap-2 text-sm font-semibold leading-snug">
+                      <span v-if="layer.id === 'citizen-reports'" class="flex shrink-0 gap-0.5" aria-label="Grave en rojo; medio en amarillo"><span class="size-2 rounded-full bg-[#d94841]"/><span class="size-2 rounded-full bg-[#e0ad2f]"/></span>
+                      <span v-else-if="layer.source || layer.color" class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: layer.source?.color ?? layer.color }"/>
+                      {{ layer.label }}
+                    </p>
                     <div class="flex shrink-0 items-center gap-1.5">
                       <span v-if="layer.status === 'soon'" class="ui-label rounded-full bg-ink/5 px-2 py-1 text-[8px] text-ink/42">Próx.</span>
                       <span v-else-if="layer.source" class="font-mono text-[9px] text-ink/38">{{ formatCount(layer.source.featureCount) }}</span>

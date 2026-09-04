@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Building2, Camera, CheckCircle2, LoaderCircle, LocateFixed, MapPin, MessageSquareWarning, Navigation, X } from 'lucide-vue-next'
 import type { CitizenReportForm, MapPoint } from '~/types/map'
+import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity } from '~/utils/citizenReportCategories'
 
 const props = defineProps<{
   location: MapPoint | null
@@ -29,14 +30,7 @@ const resolvingNeighborhood = ref(false)
 const neighborhoodHint = ref('')
 let neighborhoodRequestId = 0
 
-const reportTypes = [
-  'Boca de tormenta obstruida',
-  'Basura o residuos',
-  'Calle anegada',
-  'Canal o desagüe',
-  'Defensa o terraplén',
-  'Otro',
-]
+const selectedSeverity = computed(() => topic.value ? citizenReportSeverity(topic.value) : null)
 
 const canSubmit = computed(() => Boolean(topic.value && description.value.trim().length >= 10 && props.location))
 
@@ -157,8 +151,12 @@ onBeforeUnmount(() => {
             <span class="ui-label text-[9px] text-ink/50">Tema</span>
             <select v-model="topic" required class="mt-1.5 w-full rounded-xl border border-ink/14 bg-white px-3 py-3 text-xs outline-none transition focus:border-river focus:ring-2 focus:ring-river/12">
               <option value="" disabled>Seleccioná el tipo de problema</option>
-              <option v-for="type in reportTypes" :key="type" :value="type">{{ type }}</option>
+              <option v-for="category in citizenReportCategories" :key="category.topic" :value="category.topic">{{ category.topic }} · {{ citizenReportSeverities[category.severity].label }}</option>
             </select>
+            <p v-if="selectedSeverity" class="mt-2 flex items-center gap-1.5 text-[10px] font-semibold" :style="{ color: citizenReportSeverities[selectedSeverity].glyphColor }">
+              <span class="size-2 rounded-full" :style="{ backgroundColor: citizenReportSeverities[selectedSeverity].color }"/>
+              Severidad {{ citizenReportSeverities[selectedSeverity].label.toLowerCase() }} según la categoría seleccionada
+            </p>
           </label>
 
           <label class="block">
