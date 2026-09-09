@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ArrowUpRight, MapPin, X, DraftingCompass, LandPlot, MessageSquarePlus, MessageSquareWarning, TriangleAlert, Waves } from 'lucide-vue-next'
-import type { MapPoint, MapSelection } from '~/types/map'
+import { ArrowUpRight, MapPin, X, DraftingCompass, LandPlot, MessageSquareWarning, TriangleAlert, Waves } from 'lucide-vue-next'
+import type { MapSelection } from '~/types/map'
 
 const props = defineProps<{ point: MapSelection }>()
-const emit = defineEmits<{
+defineEmits<{
   close: []
-  report: [point: MapPoint]
 }>()
 const isCitizenReport = computed(() => props.point.feature?.layerId === 'citizen-reports')
 const isGraveReport = computed(() => isCitizenReport.value && props.point.feature?.properties.severity === 'grave')
@@ -143,9 +142,6 @@ function detailValueClass(key: string) {
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Longitud</p><p class="mt-1 font-mono text-xs">{{ point.longitude.toFixed(6) }}</p></div>
     </div>
 
-    <button v-if="!isCitizenReport && !isRiverLevel" class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#d94841] px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c93a34] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94841]" @click="emit('report', { latitude: point.latitude, longitude: point.longitude })">
-      <MessageSquarePlus :size="16"/> Cargar un reclamo en este punto
-    </button>
 
     <p class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isCitizenReport ? 'Fuente: registro público de reclamos ciudadanos. El contenido fue aprobado para su publicación; no constituye una constatación técnica oficial.' : isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Barrios RENABAP.csv”, convertido a GeoJSON sin modificar sus coordenadas WGS84 ni sus atributos principales.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>

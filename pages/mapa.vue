@@ -51,15 +51,6 @@ function setReportLocation(point: MapPoint) {
   reportOpen.value = true
 }
 
-function startReportAtPoint(point: MapPoint) {
-  reportLocation.value = point
-  placingReport.value = false
-  layersOpen.value = false
-  infoOpen.value = false
-  selectedPoint.value = null
-  reportOpen.value = true
-}
-
 function cancelReportLocation() {
   placingReport.value = false
   reportOpen.value = true
@@ -156,7 +147,7 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold shadow-sm"><Radio :size="15" class="animate-pulse text-river"/> Preparando el mapa…</div>
     </div>
 
-    <header class="surface-panel absolute inset-x-0 top-0 z-20 flex min-h-[98px] items-start justify-between gap-4 border-x-0 border-t-0 px-4 py-4 sm:inset-x-5 sm:top-5 sm:min-h-0 sm:rounded-2xl sm:border sm:px-5 sm:py-4">
+    <header class="hidden md:block surface-panel absolute inset-x-0 top-0 z-20 flex min-h-[98px] items-start justify-between gap-4 border-x-0 border-t-0 px-4 py-4 sm:inset-x-5 sm:top-5 sm:min-h-0 sm:rounded-2xl sm:border sm:px-5 sm:py-4">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h1 class="text-lg font-semibold leading-tight tracking-[-.025em] sm:text-[1.35rem]">Mapa de riesgo hídrico de Santa Fe</h1>
@@ -168,10 +159,10 @@ onBeforeUnmount(() => {
     </header>
 
     <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
-    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @created="finishReportSubmission" />
+    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
-    <MapPointInfoPanel v-if="selectedPoint && !placingReport" :point="selectedPoint" @close="selectedPoint = null" @report="startReportAtPoint" />
+    <MapPointInfoPanel v-if="selectedPoint && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 
     <div v-if="placingReport" class="pointer-events-none absolute inset-x-3 top-[116px] z-40 flex justify-center sm:top-[124px]">
       <div class="surface-panel pointer-events-auto flex w-full max-w-[560px] items-center gap-3 rounded-2xl p-3 shadow-xl sm:p-3.5">

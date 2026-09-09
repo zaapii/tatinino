@@ -56,7 +56,11 @@ export type RiverLevelReading = {
 }
 
 export type CitizenReportForm = Omit<CitizenReport, 'id' | 'createdAt' | 'photoUrl' | 'status'> & {
-  photoFile?: File
+  photoFile: File
+  address?: string
+  contactName?: string
+  contactPhone?: string
+  contactEmail?: string
 }
 
 export type LayerStatus = 'active' | 'available' | 'soon'

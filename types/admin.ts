@@ -5,6 +5,8 @@ export type AdminCitizenReport = {
   topic: string
   description: string
   neighborhood: string | null
+  address?: string | null
+  contact?: { full_name: string | null, phone: string | null, email: string | null } | null
   latitude: number
   longitude: number
   photoPath: string | null

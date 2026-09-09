@@ -13,6 +13,8 @@ type AdminCitizenReportRow = {
   topic: string
   description: string
   neighborhood: string | null
+  address: string | null
+  citizen_report_contacts: AdminCitizenReport['contact'] | NonNullable<AdminCitizenReport['contact']>[]
   latitude: number
   longitude: number
   photo_path: string | null
@@ -21,7 +23,7 @@ type AdminCitizenReportRow = {
   created_at: string
 }
 
-const ADMIN_REPORT_COLUMNS = 'id, topic, description, neighborhood, latitude, longitude, photo_path, photo_name, status, created_at'
+const ADMIN_REPORT_COLUMNS = 'id, topic, description, neighborhood, latitude, longitude, photo_path, photo_name, status, created_at, address, citizen_report_contacts(full_name, phone, email)'
 const EXPORT_PAGE_SIZE = 1000
 const PHOTOS_BUCKET = 'citizen-report-photos'
 
@@ -32,6 +34,8 @@ function mapAdminReport(row: AdminCitizenReportRow): AdminCitizenReport {
     topic: row.topic,
     description: row.description,
     neighborhood: row.neighborhood,
+    address: row.address,
+    contact: Array.isArray(row.citizen_report_contacts) ? row.citizen_report_contacts[0] ?? null : row.citizen_report_contacts,
     latitude: row.latitude,
     longitude: row.longitude,
     photoPath: row.photo_path,

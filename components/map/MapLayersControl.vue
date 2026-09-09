@@ -1,23 +1,11 @@
 <script setup lang="ts">
 import { Layers3, X, Info } from 'lucide-vue-next'
-import type { LayerGroup, MapLayerDefinition } from '~/types/map'
+import type { MapLayerDefinition } from '~/types/map'
 
 const props = defineProps<{ layers: MapLayerDefinition[] }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
 const expandedInfoId = ref<string | null>(null)
-
-const groups: { id: LayerGroup; label: string; hint: string }[] = [
-  { id: 'territory', label: 'Territorio y riesgo', hint: 'Cómo es y cómo responde la ciudad' },
-  { id: 'protection', label: 'Sistema de protección', hint: 'Infraestructura y componentes críticos' },
-  { id: 'current', label: 'Situación actual', hint: 'Datos que cambian con cada escenario' },
-  { id: 'community', label: 'Participación', hint: 'Información reportada por la comunidad' },
-]
-
-const groupedLayers = computed(() => groups.map(group => ({
-  ...group,
-  layers: props.layers.filter(layer => layer.group === group.id),
-})))
 
 const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(count)
 </script>
@@ -34,10 +22,9 @@ const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(cou
           <button class="grid size-8 place-items-center rounded-lg hover:bg-mist" aria-label="Cerrar capas" @click="open = false"><X :size="18"/></button>
         </header>
         <div class="space-y-5 py-3">
-          <section v-for="group in groupedLayers" :key="group.id">
-            <div class="mb-1 px-1"><p class="ui-label text-[9px] text-river">{{ group.label }}</p><p class="mt-0.5 text-[10px] text-ink/40">{{ group.hint }}</p></div>
+          <section>
             <div class="divide-y divide-ink/8">
-              <div v-for="layer in group.layers" :key="layer.id" class="flex gap-3 py-3">
+              <div v-for="layer in props.layers" :key="layer.id" class="flex gap-3 py-3">
                 <button role="switch" :aria-label="`${layer.enabled ? 'Ocultar' : 'Mostrar'} ${layer.label}`" :aria-checked="layer.enabled" :disabled="layer.status === 'soon'" class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition disabled:cursor-not-allowed" :class="layer.enabled ? 'bg-river' : 'bg-ink/14'" @click="emit('toggle', layer.id)">
                   <span class="absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-all" :class="layer.enabled ? 'left-[18px]' : 'left-0.5'" />
                 </button>
@@ -74,7 +61,7 @@ const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(cou
             </div>
           </section>
         </div>
-        <p class="mt-2 flex gap-2 rounded-xl bg-mist p-3 text-[11px] leading-relaxed text-ink/58"><Info :size="15" class="mt-0.5 shrink-0 text-river"/> Las capas se cargan al activarlas. Las cifras indican entidades gráficas del plano CAD, no obras únicas inventariadas.</p>
+        <p class="mt-2 flex gap-2 rounded-xl bg-mist p-3 text-[11px] leading-relaxed text-ink/58"><Info :size="15" class="mt-0.5 shrink-0 text-river"/> Las capas se cargan al activarlas. Las cifras indican la cantidad de elementos de cada fuente.</p>
       </section>
     </Transition>
   </div>

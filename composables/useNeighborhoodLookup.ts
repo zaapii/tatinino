@@ -1,4 +1,5 @@
 import type { MapPoint } from '~/types/map'
+import { fetchNominatim } from '~/utils/nominatim'
 
 type NominatimAddress = {
   neighbourhood?: string
@@ -15,18 +16,11 @@ type NominatimResult = {
 }
 
 const neighborhoodCache = new Map<string, string | null>()
-let lastRequestAt = 0
-
-const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
 export function useNeighborhoodLookup() {
   async function lookupNeighborhood(point: MapPoint) {
     const cacheKey = `${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`
     if (neighborhoodCache.has(cacheKey)) return neighborhoodCache.get(cacheKey) ?? undefined
-
-    const remainingDelay = 1000 - (Date.now() - lastRequestAt)
-    if (remainingDelay > 0) await wait(remainingDelay)
-    lastRequestAt = Date.now()
 
     const url = new URL('https://nominatim.openstreetmap.org/reverse')
     url.search = new URLSearchParams({
@@ -39,7 +33,7 @@ export function useNeighborhoodLookup() {
       'accept-language': 'es',
     }).toString()
 
-    const response = await fetch(url, { headers: { Accept: 'application/json' } })
+    const response = await fetchNominatim(url)
     if (!response.ok) throw new Error('No se pudo estimar el barrio automáticamente.')
 
     const result = await response.json() as NominatimResult

@@ -1,3 +1,5 @@
+import { citizenReportCategories } from '~/utils/citizenReportCategories'
+import { isReportPointInBounds } from '~/utils/reportLocation'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { CitizenReport, CitizenReportForm, CitizenReportStatus } from '~/types/map'
 
@@ -85,6 +87,13 @@ export function useCitizenReports() {
   }
 
   async function createReport(form: CitizenReportForm) {
+    if (!citizenReportCategories.some(category => category.topic === form.topic)) throw new Error('Seleccioná una categoría.')
+    if (!form.photoFile) throw new Error('Adjuntá una foto del reclamo.')
+    if (form.description.length > 200) throw new Error('La descripción no puede superar los 200 caracteres.')
+    if (!isReportPointInBounds(form.point)) throw new Error('Seleccioná una ubicación dentro del área de Santa Fe.')
+    if (form.neighborhood && (form.neighborhood.length < 2 || form.neighborhood.length > 120)) throw new Error('El barrio debe tener entre 2 y 120 caracteres.')
+    if ((form.contactName?.length ?? 0) > 120 || (form.contactPhone?.length ?? 0) > 40 || (form.contactEmail?.length ?? 0) > 254) throw new Error('Revisá la longitud de los datos de contacto.')
+    if (form.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail)) throw new Error('Ingresá un mail válido.')
     const supabase = useSupabaseClient()
     let photoPath: string | null = null
 
@@ -105,17 +114,19 @@ export function useCitizenReports() {
       if (uploadError) throw new Error(`No se pudo subir la foto: ${uploadError.message}`)
     }
 
-    const { error } = await supabase
-      .from(REPORTS_TABLE)
-      .insert({
-        topic: form.topic,
-        description: form.description,
-        neighborhood: form.neighborhood ?? null,
-        latitude: form.point.latitude,
-        longitude: form.point.longitude,
-        photo_path: photoPath,
-        photo_name: form.photoName ?? null,
-      })
+    const { error } = await supabase.rpc('submit_citizen_report', {
+      p_topic: form.topic,
+      p_description: form.description,
+      p_neighborhood: form.neighborhood ?? null,
+      p_latitude: form.point.latitude,
+      p_longitude: form.point.longitude,
+      p_photo_path: photoPath,
+      p_photo_name: (form.photoName || form.photoFile.name).slice(0, 180),
+      p_address: form.address ?? null,
+      p_contact_name: form.contactName ?? null,
+      p_contact_phone: form.contactPhone ?? null,
+      p_contact_email: form.contactEmail ?? null,
+    })
 
     if (error) throw new Error(`No se pudo guardar el reclamo: ${error.message}`)
   }

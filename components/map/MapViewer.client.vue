@@ -158,14 +158,16 @@ function riverReferenceColorExpression() {
   ] as unknown as ExpressionSpecification
 }
 
-type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'other'
+type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'housing' | 'construction' | 'other'
 
 const reportIconKinds: Record<string, ReportIconKind> = {
   'Boca de tormenta obstruida': 'storm-drain',
-  'Basura o residuos': 'waste',
-  'Calle anegada': 'flooded-street',
-  'Canal o desagüe': 'drainage',
-  'Defensa o terraplén': 'defense',
+  'Acumulación de basura': 'waste',
+  'Calle inundada': 'flooded-street',
+  'Canales o zanjones obstruidos': 'drainage',
+  'Defensa o terraplén en mal estado': 'defense',
+  'Población en zona de riesgo hídrico': 'housing',
+  'Obra paralizada': 'construction',
   'Otro': 'other',
 }
 
@@ -261,6 +263,35 @@ function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind
     context.moveTo(20, 27)
     context.lineTo(23, 30)
     context.lineTo(26, 27)
+    context.stroke()
+    return
+  }
+
+  if (kind === 'housing') {
+    context.beginPath()
+    context.moveTo(14, 22)
+    context.lineTo(23, 14)
+    context.lineTo(32, 22)
+    context.moveTo(17, 21)
+    context.lineTo(17, 28)
+    context.lineTo(29, 28)
+    context.lineTo(29, 21)
+    context.stroke()
+    drawWave(context, 32)
+    return
+  }
+
+  if (kind === 'construction') {
+    context.strokeRect(14, 18, 18, 8)
+    context.beginPath()
+    context.moveTo(17, 26)
+    context.lineTo(17, 31)
+    context.moveTo(29, 26)
+    context.lineTo(29, 31)
+    context.moveTo(17, 24)
+    context.lineTo(21, 20)
+    context.moveTo(25, 24)
+    context.lineTo(29, 20)
     context.stroke()
     return
   }
@@ -439,7 +470,7 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
     })
   }
 
-  if (!map.getLayer(styleIdsFor(definition.id)[2])) {
+  if (definition.id !== 'sub-basins' && !map.getLayer(styleIdsFor(definition.id)[2])) {
     map.addLayer({
       ...shared,
       id: styleIdsFor(definition.id)[2],
@@ -984,6 +1015,7 @@ onMounted(async () => {
     }
 
     const feature = selectableFeaturesNear(event.point, 7)[0]
+    if (!feature) return
     const featureCoordinates = feature?.geometry.type === 'Point'
       ? feature.geometry.coordinates
       : null
