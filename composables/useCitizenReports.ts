@@ -131,7 +131,7 @@ export function useCitizenReports() {
     if (error) throw new Error(`No se pudo guardar el reclamo: ${error.message}`)
   }
 
-  function subscribeToReports(onChange: (report: CitizenReport) => void) {
+  function subscribeToReports(onChange: (report: CitizenReport) => void, onDelete?: (id: string) => void) {
     const supabase = useSupabaseClient()
     const channel: RealtimeChannel = supabase
       .channel('public-citizen-reports')
@@ -145,6 +145,9 @@ export function useCitizenReports() {
         { event: 'UPDATE', schema: 'public', table: REPORTS_TABLE, filter: 'status=eq.approved' },
         payload => onChange(reportFromRow(payload.new as CitizenReportRow)),
       )
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: REPORTS_TABLE }, payload => {
+        if (payload.old.id) onDelete?.(String(payload.old.id))
+      })
       .subscribe()
 
     return () => {

@@ -141,6 +141,7 @@ export function useAdminReports() {
         { event: 'UPDATE', schema: 'public', table: 'citizen_reports' },
         onChange,
       )
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'citizen_reports' }, onChange)
       .subscribe()
 
     return () => {
@@ -161,7 +162,20 @@ export function useAdminReports() {
     return mapAdminReport(data as AdminCitizenReportRow)
   }
 
+  async function deleteReport(id: string) {
+    const supabase = useSupabaseClient()
+    const { data, error } = await supabase
+      .from('citizen_reports').delete().eq('id', id).select('id, photo_path').single()
+    if (error || !data) throw new Error(`No se pudo borrar el reclamo: ${error?.message ?? 'No tenés permiso o el reclamo ya no existe.'}`)
+    if (data.photo_path) {
+      const { error: photoError } = await supabase.storage.from(PHOTOS_BUCKET).remove([data.photo_path])
+      if (photoError) return 'El reclamo fue borrado, pero no se pudo eliminar su foto del almacenamiento.'
+    }
+    return ''
+  }
+
   return {
+    deleteReport,
     fetchAllAdminReports,
     fetchAdminReportCounts,
     fetchAdminReportsForExport,

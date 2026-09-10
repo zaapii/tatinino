@@ -12,6 +12,7 @@ useSeoMeta({
 const { layers, toggleLayer } = useMapLayers()
 const selectedPoint = ref<MapSelection | null>(null)
 const layersOpen = ref(false)
+const baseMap = ref<'simple' | 'satellite'>('simple')
 const reportOpen = ref(false)
 const infoOpen = ref(false)
 const mapReady = ref(false)
@@ -104,7 +105,10 @@ async function syncRiverLevels(force = false) {
 }
 
 onMounted(() => {
-  stopReportSubscription = subscribeToReports(upsertReport)
+  stopReportSubscription = subscribeToReports(upsertReport, id => {
+    reports.value = reports.value.filter(report => report.id !== id)
+    if (selectedPoint.value?.feature?.layerId === 'citizen-reports' && selectedPoint.value.feature.properties.id === id) selectedPoint.value = null
+  })
   void syncApprovedReports()
     .catch(error => reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.')
     .finally(() => reportsLoading.value = false)
@@ -126,6 +130,7 @@ onBeforeUnmount(() => {
   <div class="relative h-full overflow-hidden bg-[#dfe9e8]">
     <ClientOnly>
       <MapViewerClient
+        :base-map="baseMap"
         :water-visible="waterVisible"
         :layers="layers"
         :reports="reports"
@@ -155,10 +160,10 @@ onBeforeUnmount(() => {
         </div>
         <p class="mt-1.5 max-w-2xl text-[11px] leading-snug text-ink/55 sm:text-xs">Explorá el sistema de protección, escurrimiento y drenaje de la ciudad a partir del plano técnico suministrado.</p>
       </div>
-      <div class="hidden shrink-0 items-center gap-2 text-[10px] text-ink/48 md:flex"><span class="size-1.5 rounded-full bg-river"/> Base simplificada · OpenFreeMap</div>
+      <div class="hidden shrink-0 items-center gap-2 text-[10px] text-ink/48 md:flex"><span class="size-1.5 rounded-full bg-river"/> {{ baseMap === 'satellite' ? 'Base satelital · Esri' : 'Base simplificada · OpenFreeMap' }}</div>
     </header>
 
-    <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" :layers="layers" @toggle="toggleLayer" />
+    <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" :layers="layers" @toggle="toggleLayer" />
     <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />

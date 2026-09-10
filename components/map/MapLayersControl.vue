@@ -5,6 +5,7 @@ import type { MapLayerDefinition } from '~/types/map'
 const props = defineProps<{ layers: MapLayerDefinition[] }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
+const baseMap = defineModel<'simple' | 'satellite'>('baseMap', { default: 'simple' })
 const expandedInfoId = ref<string | null>(null)
 
 const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(count)
@@ -22,6 +23,14 @@ const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(cou
           <button class="grid size-8 place-items-center rounded-lg hover:bg-mist" aria-label="Cerrar capas" @click="open = false"><X :size="18"/></button>
         </header>
         <div class="space-y-5 py-3">
+          <fieldset>
+            <legend class="ui-label mb-2 text-ink/55">Mapa base</legend>
+            <div class="flex gap-2">
+              <label v-for="option in [{ value: 'simple', label: 'Simple' }, { value: 'satellite', label: 'Satélite' }]" :key="option.value" class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-ink/15 px-3 py-3 text-xs font-semibold has-checked:border-river has-checked:bg-river/10">
+                <input v-model="baseMap" type="radio" name="base-map" :value="option.value" class="accent-river" />{{ option.label }}
+              </label>
+            </div>
+          </fieldset>
           <section>
             <div class="divide-y divide-ink/8">
               <div v-for="layer in props.layers" :key="layer.id" class="flex gap-3 py-3">

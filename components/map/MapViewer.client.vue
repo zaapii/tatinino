@@ -12,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const props = defineProps<{
+  baseMap: 'simple' | 'satellite'
   waterVisible: boolean
   layers: MapLayerDefinition[]
   reports: CitizenReport[]
@@ -23,12 +24,30 @@ const props = defineProps<{
 }>()
 
 const mapConfig = useMapConfig()
-const mapElement = ref<HTMLDivElement | null>(null)
+const mapElement = shallowRef<HTMLDivElement | null>(null)
 const loadingSources = new Set<string>()
 const baseLayerIds: string[] = []
 let map: MapLibreMap | undefined
 let resizeObserver: ResizeObserver | undefined
 let resizeFrame: number | undefined
+let styleReady = false
+
+function updateBaseMap() {
+  if (!map || !styleReady) return
+  if (props.baseMap === 'satellite' && !map.getSource('satellite')) {
+    map.addSource('satellite', {
+      type: 'raster',
+      tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    })
+    const firstOverlay = map.getStyle().layers.find(layer => !initialBaseLayers.has(layer.id))?.id
+    map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite' }, firstOverlay)
+  }
+  if (map.getLayer('satellite')) map.setLayoutProperty('satellite', 'visibility', props.baseMap === 'satellite' && props.waterVisible ? 'visible' : 'none')
+}
+const initialBaseLayers = new Set<string>()
 
 const reportSourceId = 'citizen-reports'
 const reportHaloLayerId = 'citizen-reports-halo'
@@ -395,10 +414,11 @@ function updateLoadingState() {
 }
 
 function simplifyBaseMap() {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
 
   const unnecessaryDetail = /(building|housenumber|poi|aeroway|airport|railway|transit|shield)/i
   for (const layer of map.getStyle().layers ?? []) {
+    initialBaseLayers.add(layer.id)
     if (unnecessaryDetail.test(layer.id)) {
       map.setLayoutProperty(layer.id, 'visibility', 'none')
       continue
@@ -408,10 +428,11 @@ function simplifyBaseMap() {
 }
 
 function updateBaseVisibility(visible: boolean) {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
   for (const layerId of baseLayerIds) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
+  updateBaseMap()
 }
 
 function addHydraulicLayer(definition: MapLayerDefinition) {
@@ -730,7 +751,7 @@ function updateRiverLevelData() {
 }
 
 function updateRiverLevelVisibility(visible: boolean) {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
   for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
@@ -816,14 +837,14 @@ function updateDraftData() {
 }
 
 function updateReportVisibility(visible: boolean) {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
   for (const layerId of [reportHaloLayerId, reportPointLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
 }
 
 function updateHydraulicLayerVisibility(layerId: string) {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
   const definition = props.layers.find(layer => layer.id === layerId)
   if (!definition) return
 
@@ -833,19 +854,16 @@ function updateHydraulicLayerVisibility(layerId: string) {
 }
 
 function refreshMapRendering() {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
   map.resize()
   syncHydraulicLayers()
-  updateReportData()
-  updateRiverLevelData()
-  updateDraftData()
   updateReportVisibility(props.reportsVisible)
   updateRiverLevelVisibility(props.riverLevelsVisible)
   map.triggerRepaint()
 }
 
 function syncHydraulicLayers() {
-  if (!map?.isStyleLoaded()) return
+  if (!map || !styleReady) return
 
   for (const definition of props.layers) {
     if (!definition.source) continue
@@ -870,8 +888,22 @@ function renderedSelectableLayerIds() {
   return [...specialLayers, ...hydraulic]
 }
 
+function reportNear(point: { x: number; y: number }) {
+  if (!map || !styleReady || !props.reportsVisible) return undefined
+  const zoom = map.getZoom()
+  const scale = zoom <= 9 ? 0.72 : zoom < 13 ? 0.72 + (zoom - 9) * 0.035 : zoom < 17 ? 0.86 + (zoom - 13) * 0.035 : 1
+  // Icons are bottom-anchored: their visible body is above the geographic point.
+  return props.reports.map(report => {
+    const screen = map!.project([report.point.longitude, report.point.latitude])
+    const dx = point.x - screen.x
+    const dy = point.y - (screen.y - 27 * scale)
+    return { report, dx, dy, distance: dx * dx + dy * dy }
+  }).filter(hit => Math.abs(hit.dx) <= 23 * scale + 7 && Math.abs(hit.dy) <= 27 * scale + 7)
+    .sort((a, b) => a.distance - b.distance)[0]?.report
+}
+
 function selectableFeaturesNear(point: { x: number; y: number }, tolerance: number) {
-  if (!map) return []
+  if (!map || !styleReady) return []
   const layers = renderedSelectableLayerIds()
   if (!layers.length) return []
   const bounds: [[number, number], [number, number]] = [
@@ -939,6 +971,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
 }
 
 watch(() => props.waterVisible, updateBaseVisibility)
+watch(() => props.baseMap, updateBaseMap)
 watch(() => props.reportsVisible, updateReportVisibility)
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
 watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), updateReportData)
@@ -955,6 +988,7 @@ watch(
 onMounted(async () => {
   if (!mapElement.value) return
   const maplibregl = await import('maplibre-gl')
+  if (!mapElement.value) return
   maplibregl.setWorkerUrl('/vendor/maplibre-gl-worker.mjs')
   map = new maplibregl.Map({
     container: mapElement.value,
@@ -964,16 +998,19 @@ onMounted(async () => {
     minZoom: mapConfig.minZoom,
     maxZoom: mapConfig.maxZoom,
     attributionControl: false,
+    clickTolerance: 7,
   })
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right')
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
 
   map.once('load', () => {
+    styleReady = true
     simplifyBaseMap()
     updateBaseVisibility(props.waterVisible)
     syncHydraulicLayers()
     addCitizenReportLayers()
     addRiverLevelLayers()
+    updateBaseMap()
     map?.fitBounds([[-60.84, -31.77], [-60.45, -31.45]], {
       padding: { top: 116, right: 24, bottom: 72, left: 24 },
       maxZoom: 12.15,
@@ -1005,7 +1042,7 @@ onMounted(async () => {
   map.on('mousemove', event => {
     map!.getCanvas().style.cursor = props.placingReport
       ? 'crosshair'
-      : selectableFeaturesNear(event.point, 4).length ? 'pointer' : ''
+      : reportNear(event.point) || selectableFeaturesNear(event.point, 4).length ? 'pointer' : ''
   })
 
   map.on('click', event => {
@@ -1014,6 +1051,21 @@ onMounted(async () => {
       return
     }
 
+    const report = reportNear(event.point)
+    if (report) {
+      emit('pointSelected', {
+        ...report.point,
+        feature: {
+          layerId: reportSourceId,
+          layerLabel: report.topic,
+          color: reportMarkerColor(report.topic),
+          geometryType: 'Point',
+          sourceFile: 'Registro público de reclamos ciudadanos',
+          properties: reportGeoJson().features.find(feature => feature.properties.id === report.id)!.properties,
+        },
+      })
+      return
+    }
     const feature = selectableFeaturesNear(event.point, 7)[0]
     if (!feature) return
     const featureCoordinates = feature?.geometry.type === 'Point'
@@ -1037,6 +1089,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  styleReady = false
   resizeObserver?.disconnect()
   if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
   map?.remove()
