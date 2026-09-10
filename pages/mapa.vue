@@ -130,6 +130,8 @@ onBeforeUnmount(() => {
   <div class="relative h-full overflow-hidden bg-[#dfe9e8]">
     <ClientOnly>
       <MapViewerClient
+        :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
+        @selection-closed="selectedPoint = null"
         :base-map="baseMap"
         :water-visible="waterVisible"
         :layers="layers"
@@ -167,7 +169,7 @@ onBeforeUnmount(() => {
     <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
-    <MapPointInfoPanel v-if="selectedPoint && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
+    <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 
     <div v-if="placingReport" class="pointer-events-none absolute inset-x-3 top-[116px] z-40 flex justify-center sm:top-[124px]">
       <div class="surface-panel pointer-events-auto flex w-full max-w-[560px] items-center gap-3 rounded-2xl p-3 shadow-xl sm:p-3.5">

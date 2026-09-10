@@ -2,9 +2,12 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
 import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
 import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
+import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
+import type { Popup } from 'maplibre-gl'
 
 const emit = defineEmits<{
   pointSelected: [selection: MapSelection]
+  selectionClosed: []
   reportLocationSelected: [point: MapPoint]
   ready: []
   loadingChange: [count: number]
@@ -12,6 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const props = defineProps<{
+  selectedReport: MapSelection | null
   baseMap: 'simple' | 'satellite'
   waterVisible: boolean
   layers: MapLayerDefinition[]
@@ -31,6 +35,52 @@ let map: MapLibreMap | undefined
 let resizeObserver: ResizeObserver | undefined
 let resizeFrame: number | undefined
 let styleReady = false
+let reportPopup: Popup | undefined
+let popupResizeObserver: ResizeObserver | undefined
+let createPopup: (() => Popup) | undefined
+const popupHost = shallowRef<HTMLElement | null>(null)
+
+function closeReportPopup() {
+  popupResizeObserver?.disconnect()
+  popupResizeObserver = undefined
+  reportPopup?.off('close', onPopupClosed)
+  reportPopup?.remove()
+  reportPopup = undefined
+  popupHost.value = null
+}
+
+function onPopupClosed() {
+  emit('selectionClosed')
+}
+
+function syncReportPopup() {
+  const selection = props.selectedReport
+  if (!selection) {
+    closeReportPopup()
+    return
+  }
+  if (!map || !styleReady || !createPopup) return
+  closeReportPopup()
+  if (!reportPopup) {
+    popupHost.value = document.createElement('div')
+    reportPopup = createPopup().setDOMContent(popupHost.value)
+      .setLngLat([selection.longitude, selection.latitude]).addTo(map)
+    reportPopup.on('close', onPopupClosed)
+    popupResizeObserver = new ResizeObserver(() => {
+      if (!reportPopup || !props.selectedReport || !map || !popupHost.value) return
+      reportPopup.setLngLat([props.selectedReport.longitude, props.selectedReport.latitude])
+      const card = popupHost.value.getBoundingClientRect()
+      const bounds = map.getContainer().getBoundingClientRect()
+      const topMargin = window.innerWidth >= 768 ? 130 : 12
+      const dx = card.left < bounds.left + 12 ? card.left - bounds.left - 12
+        : card.right > bounds.right - 12 ? card.right - bounds.right + 12 : 0
+      const dy = card.top < bounds.top + topMargin ? card.top - bounds.top - topMargin : 0
+      if (dx || dy) map.panBy([dx, dy], { duration: 0 })
+    })
+    popupResizeObserver.observe(popupHost.value)
+  }
+  else reportPopup.setLngLat([selection.longitude, selection.latitude])
+}
 
 function updateBaseMap() {
   if (!map || !styleReady) return
@@ -971,6 +1021,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
 }
 
 watch(() => props.waterVisible, updateBaseVisibility)
+watch(() => props.selectedReport, syncReportPopup)
 watch(() => props.baseMap, updateBaseMap)
 watch(() => props.reportsVisible, updateReportVisibility)
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
@@ -989,6 +1040,14 @@ onMounted(async () => {
   if (!mapElement.value) return
   const maplibregl = await import('maplibre-gl')
   if (!mapElement.value) return
+  createPopup = () => new maplibregl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    anchor: 'bottom',
+    maxWidth: 'min(348px, calc(100vw - 32px))',
+    className: 'citizen-report-popover',
+    offset: [0, -42],
+  })
   maplibregl.setWorkerUrl('/vendor/maplibre-gl-worker.mjs')
   map = new maplibregl.Map({
     container: mapElement.value,
@@ -1019,6 +1078,7 @@ onMounted(async () => {
     requestAnimationFrame(() => requestAnimationFrame(refreshMapRendering))
     map?.once('idle', refreshMapRendering)
     emit('ready')
+    syncReportPopup()
   })
 
   map.on('sourcedata', event => {
@@ -1089,6 +1149,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  closeReportPopup()
   styleReady = false
   resizeObserver?.disconnect()
   if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
@@ -1098,4 +1159,21 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="mapElement" class="h-full w-full bg-[#dbe8e7]" aria-label="Mapa interactivo del sistema hidráulico de Santa Fe Capital" />
+  <Teleport v-if="popupHost && selectedReport" :to="popupHost">
+    <MapPointInfoPanel :point="selectedReport" popover @close="onPopupClosed" />
+  </Teleport>
 </template>
+
+<style scoped>
+:deep(.citizen-report-popover) {
+  z-index: 40;
+  width: min(348px, calc(100vw - 32px));
+  font: inherit;
+}
+:deep(.citizen-report-popover .maplibregl-popup-content) {
+  padding: 0;
+  border-radius: 1rem;
+  background: transparent;
+  box-shadow: 0 8px 28px rgb(9 34 53 / 18%);
+}
+</style>

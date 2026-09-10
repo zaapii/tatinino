@@ -2,7 +2,7 @@
 import { ArrowUpRight, MapPin, X, DraftingCompass, LandPlot, TriangleAlert, Waves } from 'lucide-vue-next'
 import type { MapSelection } from '~/types/map'
 
-const props = defineProps<{ point: MapSelection }>()
+const props = defineProps<{ point: MapSelection, popover?: boolean }>()
 defineEmits<{
   close: []
 }>()
@@ -96,7 +96,7 @@ function detailValueClass(key: string) {
 </script>
 
 <template>
-  <section class="surface-panel absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] overflow-auto rounded-2xl p-4 sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]" aria-live="polite">
+  <section class="surface-panel overflow-auto rounded-2xl p-4" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite">
     <header class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <p v-if="!isCitizenReport" class="ui-label text-river">Consulta en el mapa</p>
