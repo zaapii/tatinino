@@ -50,6 +50,7 @@ function closeReportPopup() {
 }
 
 function onPopupClosed() {
+  closeReportPopup()
   emit('selectionClosed')
 }
 

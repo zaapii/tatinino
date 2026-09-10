@@ -96,13 +96,13 @@ function detailValueClass(key: string) {
 </script>
 
 <template>
-  <section class="surface-panel overflow-auto rounded-2xl p-4" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite">
+  <section class="surface-panel overflow-auto rounded-2xl p-4" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite" @click.stop @dblclick.stop @mousedown.stop @touchstart.stop>
     <header class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <p v-if="!isCitizenReport" class="ui-label text-river">Consulta en el mapa</p>
         <h2 class="text-lg font-semibold tracking-[-.02em]" :class="!isCitizenReport ? 'mt-1' : ''">{{ point.feature?.layerLabel ?? 'Ubicación consultada' }}</h2>
       </div>
-      <button class="grid size-8 shrink-0 place-items-center rounded-lg hover:bg-mist" aria-label="Cerrar información" @click="$emit('close')"><X :size="18"/></button>
+      <button type="button" class="grid size-9 shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink/65 transition hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-river" aria-label="Cerrar información" @click.stop="$emit('close')"><X :size="18"/></button>
     </header>
 
     <div v-if="point.feature && isCitizenReport" class="mt-4">
