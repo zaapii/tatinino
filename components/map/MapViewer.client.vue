@@ -4,6 +4,7 @@ import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLe
 import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 import type { Popup } from 'maplibre-gl'
+import { SATELLITE_SERVICE, satelliteCaptureLabel } from '~/utils/satelliteImagery'
 
 const emit = defineEmits<{
   pointSelected: [selection: MapSelection]
@@ -35,6 +36,46 @@ let map: MapLibreMap | undefined
 let resizeObserver: ResizeObserver | undefined
 let resizeFrame: number | undefined
 let styleReady = false
+const satelliteDate = ref('Consultando fecha…')
+let imageryTimer: ReturnType<typeof setTimeout> | undefined
+let imageryRequest: AbortController | undefined
+
+function scheduleImageryDate() {
+  clearTimeout(imageryTimer)
+  imageryRequest?.abort()
+  imageryRequest = undefined
+  satelliteDate.value = 'Consultando fecha…'
+  if (!map || !styleReady || props.baseMap !== 'satellite' || !props.waterVisible) return
+  imageryTimer = setTimeout(() => void fetchImageryDate(), 350)
+}
+
+async function fetchImageryDate() {
+  if (!map || !styleReady) return
+  const request = new AbortController()
+  imageryRequest = request
+  const timeout = setTimeout(() => request.abort(), 8000)
+  const center = map.getCenter()
+  const point = props.selectedReport ?? { longitude: center.lng, latitude: center.lat }
+  const bounds = map.getBounds()
+  const canvas = map.getCanvas()
+  const params = new URLSearchParams({
+    f: 'json', geometry: `${point.longitude},${point.latitude}`, geometryType: 'esriGeometryPoint', sr: '4326',
+    mapExtent: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+    imageDisplay: `${canvas.clientWidth},${canvas.clientHeight},96`, tolerance: '0', returnGeometry: 'false',
+    layers: 'visible:5,6,7,8,9,10,11,12,13,14,15,16,17,18',
+  })
+  try {
+    const response = await fetch(`${SATELLITE_SERVICE}/identify?${params}`, { signal: request.signal })
+    if (!response.ok) throw new Error('Metadata unavailable')
+    const data = await response.json()
+    if (data.error || !Array.isArray(data.results)) throw new Error('Invalid metadata')
+    if (imageryRequest === request && !request.signal.aborted) satelliteDate.value = satelliteCaptureLabel(data.results)
+  }
+  catch {
+    if (imageryRequest === request) satelliteDate.value = 'Fecha no disponible'
+  }
+  finally { clearTimeout(timeout) }
+}
 let reportPopup: Popup | undefined
 let popupResizeObserver: ResizeObserver | undefined
 let createPopup: (() => Popup) | undefined
@@ -84,11 +125,12 @@ function syncReportPopup() {
 }
 
 function updateBaseMap() {
+  scheduleImageryDate()
   if (!map || !styleReady) return
   if (props.baseMap === 'satellite' && !map.getSource('satellite')) {
     map.addSource('satellite', {
       type: 'raster',
-      tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tiles: [`${SATELLITE_SERVICE}/tile/{z}/{y}/{x}`],
       tileSize: 256,
       maxzoom: 19,
       attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
@@ -231,6 +273,7 @@ function riverReferenceColorExpression() {
 type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'housing' | 'construction' | 'other'
 
 const reportIconKinds: Record<string, ReportIconKind> = {
+  'Desague tapado': 'drainage',
   'Boca de tormenta obstruida': 'storm-drain',
   'Acumulación de basura': 'waste',
   'Calle inundada': 'flooded-street',
@@ -1023,6 +1066,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
 
 watch(() => props.waterVisible, updateBaseVisibility)
 watch(() => props.selectedReport, syncReportPopup)
+watch(() => props.selectedReport, scheduleImageryDate)
 watch(() => props.baseMap, updateBaseMap)
 watch(() => props.reportsVisible, updateReportVisibility)
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
@@ -1106,6 +1150,9 @@ onMounted(async () => {
       : reportNear(event.point) || selectableFeaturesNear(event.point, 4).length ? 'pointer' : ''
   })
 
+  map.on('moveend', scheduleImageryDate)
+  map.on('resize', scheduleImageryDate)
+
   map.on('click', event => {
     if (props.placingReport) {
       emit('reportLocationSelected', { longitude: event.lngLat.lng, latitude: event.lngLat.lat })
@@ -1150,6 +1197,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearTimeout(imageryTimer)
+  imageryRequest?.abort()
+  imageryRequest = undefined
   closeReportPopup()
   styleReady = false
   resizeObserver?.disconnect()
@@ -1163,6 +1213,10 @@ onBeforeUnmount(() => {
   <Teleport v-if="popupHost && selectedReport" :to="popupHost">
     <MapPointInfoPanel :point="selectedReport" popover @close="onPopupClosed" />
   </Teleport>
+  <div v-if="baseMap === 'satellite' && waterVisible && !placingReport" class="pointer-events-none absolute bottom-24 left-1/2 z-20 w-max max-w-[calc(100%-32px)] -translate-x-1/2 rounded-xl border border-ink/10 bg-white/95 px-3 py-2 text-center shadow-sm" aria-live="polite">
+    <p class="text-xs font-semibold text-ink">{{ satelliteDate }}</p>
+    <p class="mt-0.5 text-[10px] text-ink/60">Esri · {{ selectedReport ? 'Ubicación del reclamo' : 'Centro del mapa' }} · La fecha varía según la zona</p>
+  </div>
 </template>
 
 <style scoped>

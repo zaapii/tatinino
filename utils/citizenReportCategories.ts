@@ -13,6 +13,11 @@ export const citizenReportSeverities: Record<CitizenReportSeverity, { label: str
 
 export const citizenReportCategories: CitizenReportCategory[] = [
   {
+    "topic": "Desague tapado",
+    "severity": "medio",
+    "description": "Desagüe obstruido que dificulta la circulación y el escurrimiento del agua."
+  },
+  {
     "topic": "Boca de tormenta obstruida",
     "severity": "medio",
     "description": "Boca de tormenta tapada por basura, escombros, ramas u otros elementos que dificultan el escurrimiento del agua."
