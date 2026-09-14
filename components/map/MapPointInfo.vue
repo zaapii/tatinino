@@ -106,8 +106,8 @@ function detailValueClass(key: string) {
     </header>
 
     <div v-if="point.feature && isCitizenReport" class="mt-2">
-      <a v-if="point.feature.properties.photoUrl" :href="String(point.feature.properties.photoUrl)" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-[20px] bg-mist">
-        <img :alt="`Foto del reclamo: ${point.feature.layerLabel}`" class="h-52 w-full object-cover"/>
+      <a v-if="point.feature.properties.photoUrl" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-[20px] bg-mist">
+        <img :src="String(point.feature.properties.photoUrl)" :alt="`Foto del reclamo: ${point.feature.layerLabel}`" class="h-52 w-full object-cover"/>
       </a>
 
       <div class="mt-3">
