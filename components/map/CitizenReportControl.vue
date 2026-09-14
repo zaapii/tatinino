@@ -239,19 +239,19 @@ onBeforeUnmount(() => {
 
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
       <section v-if="open" class="report-panel surface-panel pointer-events-auto fixed inset-x-3 bottom-3 flex max-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-2xl sm:absolute sm:bottom-auto sm:left-0 sm:top-0 sm:max-h-[calc(100dvh-216px)] sm:w-[378px] lg:max-h-[calc(100dvh-152px)]" aria-label="Cargar un reclamo ciudadano">
-        <header class="relative z-10 flex shrink-0 items-start justify-between gap-4 border-b border-white/15 bg-[#0877ad] px-4 py-4 text-white sm:px-5">
+        <header class="relative z-10 flex shrink-0 items-start justify-between gap-4 px-5 py-5 text-white">
           <div><p class="ui-label text-white/70">Participación ciudadana</p><h2 class="mt-1 text-lg font-semibold">Cargá tu reclamo</h2></div>
-          <button type="button" class="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 hover:bg-white/20" aria-label="Cerrar formulario" @click="open = false"><X :size="18"/></button>
+          <button type="button" class="grid size-8 shrink-0 place-items-center rounded-full border border-[#67bdf0] text-[#67bdf0] transition hover:bg-white/10" aria-label="Cerrar formulario" @click="open = false"><X :size="18"/></button>
         </header>
 
-        <div v-if="submitted" class="min-h-0 flex-1 overflow-y-auto px-4 py-7 text-center sm:px-5">
+        <div v-if="submitted" class="report-panel-body min-h-0 flex-1 overflow-y-auto px-4 py-7 text-center sm:px-5">
           <span class="mx-auto grid size-12 place-items-center rounded-full bg-[#d94841]/10 text-[#d94841]"><CheckCircle2 :size="25"/></span>
           <h3 class="mt-4 text-base font-semibold">Reclamo guardado</h3>
           <p class="mx-auto mt-2 max-w-[270px] text-xs leading-relaxed text-ink/55">Quedó pendiente de revisión. Se verá en el mapa cuando el equipo administrador lo apruebe.</p>
           <button class="mt-5 rounded-xl border border-ink/12 px-4 py-2.5 text-xs font-semibold transition hover:bg-mist" @click="startAnother">Cargar otro reclamo</button>
         </div>
 
-        <form v-else class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitReport">
+        <form v-else class="report-panel-body flex min-h-0 flex-1 flex-col overflow-hidden" @submit.prevent="submitReport">
           <div class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
           <label class="block">
             <span class="ui-label text-[9px] text-ink/50">1. Categoría · Obligatoria</span>
@@ -332,3 +332,15 @@ onBeforeUnmount(() => {
     </Transition>
   </div>
 </template>
+
+<style scoped>
+.report-panel {
+  border-color: rgba(9, 34, 53, .24);
+  background: #1f2a49;
+  box-shadow: 0 16px 38px rgba(9, 22, 39, .28);
+}
+.report-panel-body {
+  margin: 0 16px 16px;
+  background: #fff;
+}
+</style>

@@ -156,6 +156,7 @@ const riverLevelEvacuationLabelLayerId = 'river-levels-evacuation-label'
 const riverLevelReferenceLayerId = 'river-levels-reference-label'
 const riverLevelReferencePointSourceId = 'river-level-reference-points'
 const riverLevelReferencePointLayerId = 'river-level-reference-points-symbol'
+const riverLevelReferencePointLabelLayerId = 'river-level-reference-points-label'
 const riverLevelMarkerImageId = 'river-level-marker'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
@@ -186,7 +187,8 @@ const riverStatusColors: Record<RiverLevelReading['status'], string> = {
 const riverReferenceDefinitions: Array<{ readingId: string, mapNames: string[], points: [number, number][] }> = [
   { readingId: 'parana', mapNames: ['Río Paraná'], points: [[-60.573, -31.574], [-60.565, -31.684]] },
   { readingId: 'santa-fe', mapNames: ['Laguna Setúbal'], points: [[-60.668, -31.602], [-60.676, -31.664]] },
-  { readingId: 'salado-recreo', mapNames: ['Río Salado'], points: [[-60.748, -31.583], [-60.771, -31.689]] },
+  { readingId: 'salado-recreo', mapNames: ['Río Salado'], points: [[-60.779, -31.523], [-60.755, -31.582]] },
+  { readingId: 'salado-santo-tome', mapNames: [], points: [[-60.774, -31.635], [-60.757, -31.704]] },
   { readingId: 'colastine-rn-168', mapNames: ['Río Colastiné'], points: [[-60.615, -31.592], [-60.603, -31.665]] },
 ]
 
@@ -771,6 +773,31 @@ function addRiverLevelLayers() {
       },
     })
   }
+  if (!map.getLayer(riverLevelReferencePointLabelLayerId)) {
+    map.addLayer({
+      id: riverLevelReferencePointLabelLayerId,
+      source: riverLevelReferencePointSourceId,
+      type: 'symbol',
+      minzoom: 10,
+      layout: {
+        visibility,
+        'text-field': ['concat', ['get', 'riverName'], '\n', ['get', 'levelLabel']],
+        'text-font': ['Open Sans Regular'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 15, 11.5],
+        'text-offset': [0, 1.75],
+        'text-anchor': 'top',
+        'text-line-height': 1.15,
+        'text-padding': 4,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+      },
+      paint: {
+        'text-color': '#073b58',
+        'text-halo-color': 'rgba(255, 255, 255, .98)',
+        'text-halo-width': 2,
+      },
+    })
+  }
 }
 
 function updateRiverLevelData() {
@@ -782,7 +809,7 @@ function updateRiverLevelData() {
 
 function updateRiverLevelVisibility(visible: boolean) {
   if (!map || !styleReady) return
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, riverLevelReferencePointLabelLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
 }
@@ -905,7 +932,7 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, riverLevelReferencePointLabelLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }
