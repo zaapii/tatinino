@@ -14,7 +14,7 @@ export function useMapLayers() {
       source: { file: 'reservorios.geojson', dataUrl: '/data/hydraulics/reservorios.geojson', featureCount: 31, color: '#2f82a2', minZoom: 10.5, lineWidth: 2.2, fillOpacity: 0.4 },
     },
     {
-      id: 'channels', label: 'Canales', description: 'Canales abiertos y canales revestidos a cielo abierto', enabled: true, status: 'available', group: 'protection',
+      id: 'channels', label: 'Canales', description: 'Canales abiertos y canales revestidos a cielo abierto', enabled: false, status: 'available', group: 'protection',
       source: { file: 'canales.geojson', dataUrl: '/data/hydraulics/canales.geojson', featureCount: 90, color: '#198c8e', minZoom: 10.5, lineWidth: 4.2 },
     },
     {

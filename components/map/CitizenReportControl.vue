@@ -238,10 +238,10 @@ onBeforeUnmount(() => {
     </button>
 
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
-      <section v-if="open" class="surface-panel pointer-events-auto fixed inset-x-3 bottom-3 flex max-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-2xl sm:absolute sm:bottom-auto sm:left-0 sm:top-0 sm:max-h-[calc(100dvh-216px)] sm:w-[378px] lg:max-h-[calc(100dvh-152px)]" aria-label="Cargar un reclamo ciudadano">
-        <header class="relative z-10 flex shrink-0 bg-white items-start justify-between gap-4 border-b border-ink/10 px-4 py-4 sm:px-5">
-          <div><p class="ui-label text-[#b9312b]">Participación ciudadana</p><h2 class="mt-1 text-lg font-semibold">Cargá tu reclamo</h2></div>
-          <button type="button" class="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-mist" aria-label="Cerrar formulario" @click="open = false"><X :size="18"/></button>
+      <section v-if="open" class="report-panel surface-panel pointer-events-auto fixed inset-x-3 bottom-3 flex max-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-2xl sm:absolute sm:bottom-auto sm:left-0 sm:top-0 sm:max-h-[calc(100dvh-216px)] sm:w-[378px] lg:max-h-[calc(100dvh-152px)]" aria-label="Cargar un reclamo ciudadano">
+        <header class="relative z-10 flex shrink-0 items-start justify-between gap-4 border-b border-white/15 bg-[#0877ad] px-4 py-4 text-white sm:px-5">
+          <div><p class="ui-label text-white/70">Participación ciudadana</p><h2 class="mt-1 text-lg font-semibold">Cargá tu reclamo</h2></div>
+          <button type="button" class="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 hover:bg-white/20" aria-label="Cerrar formulario" @click="open = false"><X :size="18"/></button>
         </header>
 
         <div v-if="submitted" class="min-h-0 flex-1 overflow-y-auto px-4 py-7 text-center sm:px-5">
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
 
           <label class="block">
             <span class="ui-label text-[9px] text-ink/50">3. Descripción · Opcional</span>
-            <textarea v-model="description" rows="3" maxlength="200" placeholder="Contanos qué está pasando y desde cuándo…" class="mt-1.5 w-full resize-none rounded-xl border border-ink/14 bg-white px-3 py-3 text-xs leading-relaxed outline-none transition placeholder:text-ink/32 focus:border-river focus:ring-2 focus:ring-river/12"/>
+            <textarea v-model="description" rows="3" maxlength="200" placeholder="Contanos qué está pasando y desde cuándo…" class="mt-1.5 h-[92px] w-full resize-none rounded-xl border border-ink/14 bg-white px-3 py-3 text-base leading-relaxed outline-none transition placeholder:text-ink/32 focus:border-river focus:ring-2 focus:ring-river/12 sm:text-xs"/>
             <span class="mt-1 block text-right font-mono text-[9px] text-ink/35">{{ description.length }}/200</span>
           </label>
 

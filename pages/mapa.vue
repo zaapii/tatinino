@@ -160,14 +160,13 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold shadow-sm"><Radio :size="15" class="animate-pulse text-river"/> Preparando el mapa…</div>
     </div>
 
-    <div v-if="!placingReport" class="map-actions absolute left-3 top-3 z-30 flex items-center gap-2 sm:left-5 sm:top-5">
+    <div v-if="!placingReport" class="map-actions absolute left-3 top-[76px] z-30 flex items-center gap-2 lg:left-5 lg:top-5">
       <button class="map-action layers-action" :aria-expanded="layersOpen" @click="layersOpen = !layersOpen"><img src="/figma/layers.svg" width="29" height="29" alt="" />Capas</button>
       <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
     </div>
 
-    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" @toggle="toggleLayer" />
+    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
     <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
-    <MapElevationLegend v-if="!placingReport" :layers="layers" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 
     <div v-if="placingReport" class="pointer-events-none absolute inset-x-3 top-[116px] z-40 flex justify-center sm:top-[124px]">

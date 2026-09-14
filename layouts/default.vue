@@ -14,7 +14,7 @@ const policyOpen = ref(false)
   >
     <AppSidebar class="hidden lg:flex" @policy="policyOpen = true" />
     <MobileNavigation class="lg:hidden" @policy="policyOpen = true" />
-    <main :class="isMap ? 'h-dvh overflow-hidden pt-16 lg:pt-0' : 'min-w-0 pt-16 lg:pt-0'">
+    <main :class="isMap ? 'h-dvh overflow-hidden' : 'min-w-0 pt-16 lg:pt-0'">
       <slot />
     </main>
   </div>

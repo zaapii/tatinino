@@ -40,6 +40,7 @@ let styleReady = false
 const satelliteDate = ref('Consultando fecha…')
 let imageryTimer: ReturnType<typeof setTimeout> | undefined
 let imageryRequest: AbortController | undefined
+let reportPulseTimer: ReturnType<typeof setInterval> | undefined
 
 function scheduleImageryDate() {
   clearTimeout(imageryTimer)
@@ -153,6 +154,9 @@ const riverLevelLabelLayerId = 'river-levels-label'
 const riverLevelAlertLabelLayerId = 'river-levels-alert-label'
 const riverLevelEvacuationLabelLayerId = 'river-levels-evacuation-label'
 const riverLevelReferenceLayerId = 'river-levels-reference-label'
+const riverLevelReferencePointSourceId = 'river-level-reference-points'
+const riverLevelReferencePointLayerId = 'river-level-reference-points-symbol'
+const riverLevelMarkerImageId = 'river-level-marker'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
 const draftPointLayerId = 'citizen-report-draft-point'
@@ -179,11 +183,11 @@ const riverStatusColors: Record<RiverLevelReading['status'], string> = {
   unknown: '#78909c',
 }
 
-const riverReferenceDefinitions: Array<{ readingId: string, mapNames: string[] }> = [
-  { readingId: 'parana', mapNames: ['Río Paraná'] },
-  { readingId: 'santa-fe', mapNames: ['Laguna Setúbal'] },
-  { readingId: 'salado-recreo', mapNames: ['Río Salado'] },
-  { readingId: 'colastine-rn-168', mapNames: ['Río Colastiné'] },
+const riverReferenceDefinitions: Array<{ readingId: string, mapNames: string[], points: [number, number][] }> = [
+  { readingId: 'parana', mapNames: ['Río Paraná'], points: [[-60.573, -31.574], [-60.565, -31.684]] },
+  { readingId: 'santa-fe', mapNames: ['Laguna Setúbal'], points: [[-60.668, -31.602], [-60.676, -31.664]] },
+  { readingId: 'salado-recreo', mapNames: ['Río Salado'], points: [[-60.748, -31.583], [-60.771, -31.689]] },
+  { readingId: 'colastine-rn-168', mapNames: ['Río Colastiné'], points: [[-60.615, -31.592], [-60.603, -31.665]] },
 ]
 
 const levelFormatter = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -271,10 +275,10 @@ function riverReferenceColorExpression() {
   ] as unknown as ExpressionSpecification
 }
 
-type ReportIconKind = 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'housing' | 'construction' | 'other'
+type ReportIconKind = 'drain' | 'storm-drain' | 'waste' | 'flooded-street' | 'drainage' | 'defense' | 'housing' | 'construction' | 'other'
 
 const reportIconKinds: Record<string, ReportIconKind> = {
-  'Desague tapado': 'drainage',
+  'Desague tapado': 'drain',
   'Boca de tormenta obstruida': 'storm-drain',
   'Acumulación de basura': 'waste',
   'Calle inundada': 'flooded-street',
@@ -382,7 +386,27 @@ function simplifyBaseMap() {
       continue
     }
     baseLayerIds.push(layer.id)
+    if (/(water|waterway|ocean|lake|river)/i.test(layer.id)) {
+      if (layer.type === 'fill') {
+        map.setPaintProperty(layer.id, 'fill-color', '#a8d9ee')
+        map.setPaintProperty(layer.id, 'fill-opacity', 0.82)
+      }
+      else if (layer.type === 'line') {
+        map.setPaintProperty(layer.id, 'line-color', '#55b5dd')
+        map.setPaintProperty(layer.id, 'line-opacity', 0.9)
+      }
+    }
   }
+}
+
+function startReportPulse() {
+  if (!map || reportPulseTimer || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  let bright = true
+  reportPulseTimer = setInterval(() => {
+    if (!map?.getLayer(reportHaloLayerId)) return
+    bright = !bright
+    map.setPaintProperty(reportHaloLayerId, 'circle-opacity', bright ? 0.48 : 0.14)
+  }, 850)
 }
 
 function updateBaseVisibility(visible: boolean) {
@@ -550,6 +574,36 @@ function riverLevelGeoJson() {
   }
 }
 
+function riverReferencePointGeoJson() {
+  return {
+    type: 'FeatureCollection' as const,
+    features: riverReferenceDefinitions.flatMap(definition => {
+      const reading = props.riverLevels.find(item => item.id === definition.readingId)
+      if (!reading) return []
+      return definition.points.map((coordinates, index) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates },
+        properties: { ...riverReadingProperties(reading), id: `${reading.id}-reference-${index}`, isRiverReference: true },
+      }))
+    }),
+  }
+}
+
+function addRiverLevelMarkerImage() {
+  if (!map || map.hasImage(riverLevelMarkerImageId)) return
+  const currentMap = map
+  currentMap.addImage(riverLevelMarkerImageId, { width: 92, height: 92, data: new Uint8Array(92 * 92 * 4) }, { pixelRatio: 2 })
+  void loadReportAsset('/figma/river-level-marker.svg').then(image => {
+    if (map !== currentMap || !currentMap.hasImage(riverLevelMarkerImageId)) return
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 92
+    const context = canvas.getContext('2d')
+    if (!context) return
+    context.drawImage(image, 0, 0, 92, 92)
+    currentMap.updateImage(riverLevelMarkerImageId, context.getImageData(0, 0, 92, 92))
+  }).catch(error => emit('layerError', error.message))
+}
+
 function addRiverLevelReferenceLayer() {
   if (!map || map.getLayer(riverLevelReferenceLayerId)) return
   map.addLayer({
@@ -593,6 +647,7 @@ function updateRiverLevelReferenceLayer() {
 
 function addRiverLevelLayers() {
   if (!map) return
+  addRiverLevelMarkerImage()
   const visibility: 'visible' | 'none' = props.riverLevelsVisible ? 'visible' : 'none'
   if (!map.getSource(riverLevelSourceId)) map.addSource(riverLevelSourceId, { type: 'geojson', data: riverLevelGeoJson() })
   else updateRiverLevelData()
@@ -615,13 +670,13 @@ function addRiverLevelLayers() {
     map.addLayer({
       id: riverLevelPointLayerId,
       source: riverLevelSourceId,
-      type: 'circle',
-      layout: { visibility },
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 6.5, 16, 9],
-        'circle-color': ['get', 'markerColor'],
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 3,
+      type: 'symbol',
+      layout: {
+        visibility,
+        'icon-image': riverLevelMarkerImageId,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.72, 16, 0.95],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
       },
     })
   }
@@ -700,17 +755,34 @@ function addRiverLevelLayers() {
     })
   }
   addRiverLevelReferenceLayer()
+  if (!map.getSource(riverLevelReferencePointSourceId)) map.addSource(riverLevelReferencePointSourceId, { type: 'geojson', data: riverReferencePointGeoJson() })
+  if (!map.getLayer(riverLevelReferencePointLayerId)) {
+    map.addLayer({
+      id: riverLevelReferencePointLayerId,
+      source: riverLevelReferencePointSourceId,
+      type: 'symbol',
+      minzoom: 10,
+      layout: {
+        visibility,
+        'icon-image': riverLevelMarkerImageId,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.62, 16, 0.86],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      },
+    })
+  }
 }
 
 function updateRiverLevelData() {
   if (!map) return
   ;(map.getSource(riverLevelSourceId) as GeoJSONSource | undefined)?.setData(riverLevelGeoJson())
+  ;(map.getSource(riverLevelReferencePointSourceId) as GeoJSONSource | undefined)?.setData(riverReferencePointGeoJson())
   updateRiverLevelReferenceLayer()
 }
 
 function updateRiverLevelVisibility(visible: boolean) {
   if (!map || !styleReady) return
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
 }
@@ -739,12 +811,13 @@ function addCitizenReportLayers() {
       id: reportHaloLayerId,
       source: reportSourceId,
       type: 'circle',
+      filter: ['==', ['get', 'severity'], 'grave'],
       layout: { visibility: props.reportsVisible ? 'visible' : 'none' },
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 16, 16, 23],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 21, 16, 31],
         'circle-color': reportSeverityColorExpression,
-        'circle-opacity': 0.2,
-        'circle-blur': 0.35,
+        'circle-opacity': 0.42,
+        'circle-blur': 0.3,
       },
     })
   }
@@ -832,7 +905,7 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }
@@ -842,7 +915,7 @@ function renderedSelectableLayerIds() {
   const hydraulic = props.layers.flatMap(layer => styleIdsFor(layer.id)).filter(id => map?.getLayer(id))
   const specialLayers: string[] = []
   if (map.getLayer(reportPointLayerId) && props.reportsVisible) specialLayers.push(reportPointLayerId)
-  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId, riverLevelReferenceLayerId)
+  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId, riverLevelReferencePointLayerId, riverLevelReferenceLayerId)
   return [...specialLayers, ...hydraulic]
 }
 
@@ -914,6 +987,17 @@ function featureInfo(feature: MapGeoJSONFeature) {
     }
   }
 
+  if (feature.source === riverLevelReferencePointSourceId) {
+    return {
+      layerId: riverLevelSourceId,
+      layerLabel: String(properties.riverName ?? 'Nivel del río'),
+      color: '#55c3e9',
+      geometryType: feature.geometry.type,
+      sourceFile: String(properties.dataUrl ?? ''),
+      properties,
+    }
+  }
+
   const layerId = feature.source.replace('hydraulic-', '')
   const definition = props.layers.find(layer => layer.id === layerId)
   if (!definition?.source) return undefined
@@ -977,11 +1061,13 @@ onMounted(async () => {
     updateBaseVisibility(props.waterVisible)
     syncHydraulicLayers()
     addCitizenReportLayers()
+    startReportPulse()
     addRiverLevelLayers()
     updateBaseMap()
-    map?.fitBounds([[-60.84, -31.77], [-60.45, -31.45]], {
-      padding: { top: 116, right: 24, bottom: 72, left: 24 },
-      maxZoom: 12.15,
+    const mobile = window.innerWidth < 640
+    map?.fitBounds(mobile ? [[-60.78, -31.72], [-60.62, -31.55]] : [[-60.82, -31.76], [-60.55, -31.49]], {
+      padding: { top: mobile ? 72 : 116, right: 24, bottom: 72, left: 24 },
+      maxZoom: mobile ? 13 : 12.55,
       duration: 0,
     })
     requestAnimationFrame(() => requestAnimationFrame(refreshMapRendering))
@@ -1062,6 +1148,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(imageryTimer)
+  if (reportPulseTimer) clearInterval(reportPulseTimer)
   imageryRequest?.abort()
   imageryRequest = undefined
   closeReportPopup()

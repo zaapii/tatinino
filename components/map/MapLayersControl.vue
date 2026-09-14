@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MapLayerDefinition } from '~/types/map'
 import { reportDesignOrder } from '~/utils/reportDesign'
-const props = defineProps<{ layers: MapLayerDefinition[], hideTrigger?: boolean }>()
+const props = defineProps<{ layers: MapLayerDefinition[], reportCount?: number, hideTrigger?: boolean }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
 const baseMap = defineModel<'simple' | 'satellite'>('baseMap', { default: 'simple' })
@@ -13,7 +13,7 @@ const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.inde
 </script>
 
 <template>
-  <div class="pointer-events-none absolute inset-x-0 top-[62px] z-30 px-3 sm:inset-auto sm:left-5 sm:top-[70px] sm:p-0">
+  <div class="pointer-events-none absolute inset-x-0 top-[126px] z-30 px-3 sm:inset-auto sm:left-3 sm:p-0 lg:left-5 lg:top-[70px]">
     <button v-if="!open && !hideTrigger" class="layers-trigger pointer-events-auto" @click="open = true"><img src="/figma/layers.svg" width="29" height="29" alt="" /> Capas</button>
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
       <section v-if="open" class="layers-panel pointer-events-auto" aria-label="Control de capas">
@@ -30,7 +30,7 @@ const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.inde
               <img v-if="layer.id === 'citizen-reports'" src="/figma/reports.svg" width="28" height="28" alt="" />
               <img v-else-if="layer.id === 'river-levels'" src="/figma/river.svg" width="24" height="24" alt="" />
             </span>
-            <span class="layer-label">{{ layer.label }}</span>
+            <span class="layer-label">{{ layer.label }} <span v-if="layer.id === 'citizen-reports'" class="report-count">{{ props.reportCount ?? 0 }}</span></span>
             <button v-if="layer.id === 'citizen-reports'" class="layer-info" :aria-expanded="reportsExpanded" aria-label="Categorías de reclamos" @click="reportsExpanded = !reportsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !reportsExpanded }" /></button>
             <button v-else-if="layer.id !== 'water'" class="layer-info" :aria-expanded="expandedInfoId === layer.id" :aria-label="`Información sobre ${layer.label}`" @click="expandedInfoId = expandedInfoId === layer.id ? null : layer.id"><img src="/figma/info.svg" width="15" height="15" alt="" /></button>
           </div>
@@ -58,6 +58,7 @@ const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.inde
 .layer-section:last-child { border-bottom: 1.5px solid #dcdcda; }
 .layer-row { display: flex; align-items: center; gap: 10px; min-height: 49px; padding: 8px 10px; }
 .layer-label { flex: 1; font-size: 12px; font-weight: 700; line-height: 17px; }
+.report-count { display: inline-grid; min-width: 22px; height: 20px; margin-left: 4px; place-items: center; border-radius: 999px; background: #e6f4fb; padding: 0 6px; color: #0877ad; font-family: var(--font-mono); font-size: 10px; }
 .layer-switch { position: relative; width: 25px; height: 14px; flex-shrink: 0; border-radius: 10px; background: #bcc3cc; cursor: pointer; }
 .layer-switch[aria-checked=true] { background: #4ba6de; }
 .layer-switch span { position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%; background: white; transition: transform .15s; }

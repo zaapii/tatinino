@@ -1,4 +1,5 @@
 export const reportDesignIcons: Record<string, string> = {
+  'Desague tapado': 'drain',
   'Boca de tormenta obstruida': 'storm-drain',
   'Acumulación de basura': 'waste',
   'Calle inundada': 'street',

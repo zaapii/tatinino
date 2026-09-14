@@ -13,8 +13,8 @@ export function useMapConfig() {
 
   return {
     center: SANTA_FE_CENTER,
-    zoom: 11.6,
-    minZoom: 8,
+    zoom: 12.35,
+    minZoom: 10,
     maxZoom: 18,
     baseStyle: 'https://tiles.openfreemap.org/styles/positron',
     externalSources,

@@ -11,6 +11,11 @@ const isGraveReport = computed(() => isCitizenReport.value && props.point.featur
 const isRenabapNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-neighborhoods')
 const isRiverLevel = computed(() => props.point.feature?.layerId === 'river-levels')
 const isRiverReference = computed(() => isRiverLevel.value && props.point.feature?.properties.isRiverReference === true)
+const isNamedInfrastructure = computed(() => ['reservoirs', 'channels', 'pumping'].includes(props.point.feature?.layerId ?? ''))
+const panelTitle = computed(() => {
+  if (isNamedInfrastructure.value && props.point.feature?.properties.name) return String(props.point.feature.properties.name)
+  return props.point.feature?.layerLabel ?? 'Ubicación consultada'
+})
 
 const geometryLabels: Record<string, string> = {
   Point: 'Punto',
@@ -64,7 +69,9 @@ const detailRows = computed(() => {
       ? ['stationName', 'levelLabel', 'observedAtLabel', 'trendLabel', 'riverStatusLabel', 'lowWaterLevelLabel', 'alertLevelLabel', 'evacuationLevelLabel', 'sourceName']
     : isRenabapNeighborhood.value
       ? ['barrio', 'familias', 'renabap_id', 'localidad', 'departamento', 'provincia']
-      : ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
+      : isNamedInfrastructure.value
+        ? ['description']
+        : ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
   return preferredKeys
     .filter(key => props.point.feature?.properties[key] !== undefined && props.point.feature?.properties[key] !== null && props.point.feature?.properties[key] !== '')
     .map(key => ({ key, label: propertyLabels[key] ?? key, value: props.point.feature!.properties[key] }))
@@ -100,7 +107,7 @@ function detailValueClass(key: string) {
     <header class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <p v-if="!isCitizenReport" class="ui-label text-river">Consulta en el mapa</p>
-        <h2 class="font-bold" :class="isCitizenReport ? 'flex items-start gap-1 text-base leading-[19px]' : 'mt-1 text-lg'"><img v-if="isCitizenReport" :src="isGraveReport ? '/figma/grave.svg' : '/figma/medio.svg'" :alt="isGraveReport ? 'Riesgo grave' : 'Riesgo medio'" width="23" height="23" class="size-[23px] shrink-0" />{{ point.feature?.layerLabel ?? 'Ubicación consultada' }}</h2>
+        <h2 class="font-bold" :class="isCitizenReport ? 'flex items-start gap-1 text-base leading-[19px]' : 'mt-1 text-lg'"><img v-if="isCitizenReport" :src="isGraveReport ? '/figma/grave.svg' : '/figma/medio.svg'" :alt="isGraveReport ? 'Riesgo grave' : 'Riesgo medio'" width="23" height="23" class="size-[23px] shrink-0" />{{ panelTitle }}</h2>
       </div>
       <button type="button" class="grid size-9 shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink/65 transition hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-river" aria-label="Cerrar información" @click.stop="$emit('close')"><X :size="18"/></button>
     </header>
@@ -117,11 +124,11 @@ function detailValueClass(key: string) {
     </div>
 
     <div v-else-if="point.feature" class="mt-4">
-      <div class="flex items-center gap-3 rounded-xl p-3.5 text-white" :style="{ backgroundColor: point.feature.color }">
+      <div class="flex items-center gap-3 rounded-xl p-3.5 text-white" :style="{ backgroundColor: isNamedInfrastructure ? '#0877ad' : point.feature.color }">
         <Waves v-if="isRiverLevel" :size="18" class="shrink-0"/>
         <LandPlot v-else-if="isRenabapNeighborhood" :size="18" class="shrink-0"/>
         <DraftingCompass v-else :size="18" class="shrink-0"/>
-        <div><p class="text-xs font-semibold">{{ isRiverReference ? 'Referencia repetida sobre el cauce' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : `${geometryLabels[point.feature.geometryType] ?? point.feature.geometryType} · Actualización 2025` }}</p></div>
+        <div><p class="text-xs font-semibold">{{ isRiverReference ? 'Referencia sobre el cauce' : isRiverLevel ? 'Escala hidrométrica oficial' : isRenabapNeighborhood ? 'Barrio popular · RENABAP' : isNamedInfrastructure ? point.feature.layerLabel : 'Elemento del plano hidráulico' }}</p><p class="mt-0.5 text-[10px] text-white/75">{{ isRiverLevel ? String(point.feature.properties.dataStateLabel ?? 'Último dato disponible') : isRenabapNeighborhood ? 'Delimitación territorial del registro nacional' : geometryLabels[point.feature.geometryType] ?? point.feature.geometryType }}</p></div>
       </div>
 
       <dl v-if="detailRows.length" class="mt-3 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10">
@@ -142,12 +149,12 @@ function detailValueClass(key: string) {
 
     <div v-else class="mt-4 flex items-start gap-3 rounded-xl bg-mist p-3.5"><MapPin :size="18" class="mt-0.5 shrink-0 text-river"/><div><p class="text-xs font-semibold">Sin elemento técnico seleccionado</p><p class="mt-1 text-xs leading-relaxed text-ink/57">Activá una capa o acercate al mapa para consultar su información.</p></div></div>
 
-    <div v-if="!isCitizenReport" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10">
+    <div v-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10">
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Latitud</p><p class="mt-1 font-mono text-xs">{{ point.latitude.toFixed(6) }}</p></div>
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Longitud</p><p class="mt-1 font-mono text-xs">{{ point.longitude.toFixed(6) }}</p></div>
     </div>
 
 
-    <p v-if="!isCitizenReport" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Barrios RENABAP.csv”, convertido a GeoJSON sin modificar sus coordenadas WGS84 ni sus atributos principales.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
+    <p v-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Barrios RENABAP.csv”, convertido a GeoJSON sin modificar sus coordenadas WGS84 ni sus atributos principales.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>
 </template>
