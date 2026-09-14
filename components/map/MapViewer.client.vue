@@ -4,6 +4,7 @@ import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLe
 import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 import type { Popup } from 'maplibre-gl'
+import { reportDesignIcons } from '~/utils/reportDesign'
 import { SATELLITE_SERVICE, satelliteCaptureLabel } from '~/utils/satelliteImagery'
 
 const emit = defineEmits<{
@@ -315,177 +316,40 @@ const reportSeverityColorExpression = [
   citizenReportSeverities.medio.color,
 ] as unknown as ExpressionSpecification
 
-function drawWave(context: CanvasRenderingContext2D, y: number) {
-  context.beginPath()
-  context.moveTo(15, y)
-  context.bezierCurveTo(18, y - 2.5, 20, y + 2.5, 23, y)
-  context.bezierCurveTo(26, y - 2.5, 28, y + 2.5, 31, y)
-  context.stroke()
-}
-
-function drawReportGlyph(context: CanvasRenderingContext2D, kind: ReportIconKind, glyphColor: string) {
-  context.strokeStyle = glyphColor
-  context.fillStyle = glyphColor
-  context.lineWidth = 2
-  context.lineCap = 'round'
-  context.lineJoin = 'round'
-
-  if (kind === 'storm-drain') {
-    context.strokeRect(15, 15, 16, 13)
-    for (const x of [19, 23, 27]) {
-      context.beginPath()
-      context.moveTo(x, 17)
-      context.lineTo(x, 26)
-      context.stroke()
-    }
-    return
-  }
-
-  if (kind === 'waste') {
-    context.strokeRect(17, 17, 12, 12)
-    context.beginPath()
-    context.moveTo(15, 16)
-    context.lineTo(31, 16)
-    context.moveTo(20, 13.5)
-    context.lineTo(26, 13.5)
-    context.moveTo(20, 20)
-    context.lineTo(20, 26)
-    context.moveTo(26, 20)
-    context.lineTo(26, 26)
-    context.stroke()
-    return
-  }
-
-  if (kind === 'flooded-street') {
-    drawWave(context, 18)
-    drawWave(context, 23)
-    drawWave(context, 28)
-    return
-  }
-
-  if (kind === 'drainage') {
-    context.beginPath()
-    context.moveTo(23, 13)
-    context.lineTo(23, 29)
-    context.moveTo(23, 20)
-    context.lineTo(16, 16)
-    context.moveTo(23, 23)
-    context.lineTo(30, 19)
-    context.stroke()
-    context.beginPath()
-    context.moveTo(20, 27)
-    context.lineTo(23, 30)
-    context.lineTo(26, 27)
-    context.stroke()
-    return
-  }
-
-  if (kind === 'housing') {
-    context.beginPath()
-    context.moveTo(14, 22)
-    context.lineTo(23, 14)
-    context.lineTo(32, 22)
-    context.moveTo(17, 21)
-    context.lineTo(17, 28)
-    context.lineTo(29, 28)
-    context.lineTo(29, 21)
-    context.stroke()
-    drawWave(context, 32)
-    return
-  }
-
-  if (kind === 'construction') {
-    context.strokeRect(14, 18, 18, 8)
-    context.beginPath()
-    context.moveTo(17, 26)
-    context.lineTo(17, 31)
-    context.moveTo(29, 26)
-    context.lineTo(29, 31)
-    context.moveTo(17, 24)
-    context.lineTo(21, 20)
-    context.moveTo(25, 24)
-    context.lineTo(29, 20)
-    context.stroke()
-    return
-  }
-
-  if (kind === 'defense') {
-    context.beginPath()
-    context.moveTo(14, 29)
-    context.lineTo(23, 14)
-    context.lineTo(32, 29)
-    context.closePath()
-    context.stroke()
-    context.beginPath()
-    context.moveTo(18, 25)
-    context.lineTo(28, 25)
-    context.moveTo(20, 21)
-    context.lineTo(26, 21)
-    context.stroke()
-    return
-  }
-
-  context.beginPath()
-  context.moveTo(23, 15)
-  context.lineTo(23, 24)
-  context.stroke()
-  context.beginPath()
-  context.arc(23, 29, 1.25, 0, Math.PI * 2)
-  context.fill()
-}
-
-function createReportIcon(kind: ReportIconKind, severity: CitizenReportSeverity) {
-  const pixelRatio = 2
-  const width = 46
-  const height = 54
-  const canvas = document.createElement('canvas')
-  canvas.width = width * pixelRatio
-  canvas.height = height * pixelRatio
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('No se pudo crear el marcador de reclamo.')
-  context.scale(pixelRatio, pixelRatio)
-
-  context.shadowColor = 'rgba(9, 34, 53, .25)'
-  context.shadowBlur = 4
-  context.shadowOffsetY = 2
-  context.fillStyle = '#ffffff'
-  context.beginPath()
-  context.arc(23, 22, 21, 0, Math.PI * 2)
-  context.fill()
-  context.beginPath()
-  context.moveTo(11, 37)
-  context.lineTo(23, 53)
-  context.lineTo(35, 37)
-  context.closePath()
-  context.fill()
-
-  context.shadowColor = 'transparent'
-  context.fillStyle = reportFillColor(severity)
-  context.beginPath()
-  context.arc(23, 22, 18, 0, Math.PI * 2)
-  context.fill()
-  context.beginPath()
-  context.moveTo(13, 35)
-  context.lineTo(23, 49)
-  context.lineTo(33, 35)
-  context.closePath()
-  context.fill()
-
-  context.fillStyle = '#ffffff'
-  context.beginPath()
-  context.arc(23, 22, 13.5, 0, Math.PI * 2)
-  context.fill()
-  drawReportGlyph(context, kind, reportGlyphColor(severity))
-
-  return { image: context.getImageData(0, 0, canvas.width, canvas.height), pixelRatio }
+function loadReportAsset(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('No se pudo cargar un icono del mapa.'))
+    image.src = src
+  })
 }
 
 function addReportIcons() {
   if (!map) return
+  const currentMap = map
   for (const definition of reportIcons) {
-    if (map.hasImage(definition.id)) continue
-    const { image, pixelRatio } = createReportIcon(definition.kind, definition.severity)
-    map.addImage(definition.id, image, { pixelRatio })
+    if (currentMap.hasImage(definition.id)) continue
+    currentMap.addImage(definition.id, { width: 92, height: 92, data: new Uint8Array(92 * 92 * 4) }, { pixelRatio: 2 })
+    const kind = definition.topic === 'Desague tapado' ? 'drain' : reportDesignIcons[definition.topic]
+    // Keep the data's severity; illustration colors must not reclassify reports.
+    const base = definition.severity === 'grave' ? 'grave' : 'medio'
+    void Promise.all([
+      loadReportAsset(`/figma/${base}.svg`),
+      kind ? loadReportAsset(`/figma/${kind}-glyph.svg`) : Promise.resolve(null),
+    ]).then(([background, glyph]) => {
+      if (map !== currentMap || !currentMap.hasImage(definition.id)) return
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 92
+      const context = canvas.getContext('2d')
+      if (!context) return
+      context.drawImage(background, 0, 0, 92, 92)
+      if (glyph) {
+        if (kind === 'other') context.drawImage(glyph, 12, 6, 68, 68)
+        else context.drawImage(glyph, 31, 32, 30, 30)
+      }
+      currentMap.updateImage(definition.id, context.getImageData(0, 0, 92, 92))
+    }).catch(error => emit('layerError', error.message))
   }
 }
 

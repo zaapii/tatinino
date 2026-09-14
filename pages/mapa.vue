@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportDesignOrder } from '~/utils/reportDesign'
 import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
 import type { CitizenReport, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
@@ -25,6 +26,11 @@ const riverLevelsLoading = ref(true)
 const placingReport = ref(false)
 const reportLocation = ref<MapPoint | null>(null)
 const reports = ref<CitizenReport[]>([])
+const reportTopics = ref([...reportDesignOrder])
+const filteredReports = computed(() => reports.value.filter(report => reportTopics.value.includes(report.topic)))
+const reportRequested = useState('hero-report-requested', () => false)
+watch(reportRequested, requested => { if (requested) { reportOpen.value = true; reportRequested.value = false } })
+watch(reportTopics, () => { if (selectedPoint.value?.feature?.layerId === 'citizen-reports') selectedPoint.value = null })
 const riverLevels = ref<RiverLevelReading[]>([])
 const { fetchReports, subscribeToReports } = useCitizenReports()
 const { fetchRiverLevels } = useRiverLevels()
@@ -135,7 +141,7 @@ onBeforeUnmount(() => {
         :base-map="baseMap"
         :water-visible="waterVisible"
         :layers="layers"
-        :reports="reports"
+        :reports="filteredReports"
         :reports-visible="reportsVisible"
         :river-levels="riverLevels"
         :river-levels-visible="riverLevelsVisible"
@@ -154,20 +160,13 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold shadow-sm"><Radio :size="15" class="animate-pulse text-river"/> Preparando el mapa…</div>
     </div>
 
-    <header class="hidden md:block surface-panel absolute inset-x-0 top-0 z-20 flex min-h-[98px] items-start justify-between gap-4 border-x-0 border-t-0 px-4 py-4 sm:inset-x-5 sm:top-5 sm:min-h-0 sm:rounded-2xl sm:border sm:px-5 sm:py-4">
-      <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 class="text-lg font-semibold leading-tight tracking-[-.025em] sm:text-[1.35rem]">Mapa de riesgo hídrico de Santa Fe</h1>
-          <span class="ui-label rounded-full border border-river/20 bg-river/8 px-2.5 py-1 text-[9px] text-river">Plano hidráulico · 2025</span>
-        </div>
-        <p class="mt-1.5 max-w-2xl text-[11px] leading-snug text-ink/55 sm:text-xs">Explorá el sistema de protección, escurrimiento y drenaje de la ciudad a partir del plano técnico suministrado.</p>
-      </div>
-      <div class="hidden shrink-0 items-center gap-2 text-[10px] text-ink/48 md:flex"><span class="size-1.5 rounded-full bg-river"/> {{ baseMap === 'satellite' ? 'Base satelital · Esri' : 'Base simplificada · OpenFreeMap' }}</div>
-    </header>
+    <div v-if="!placingReport" class="map-actions absolute left-3 top-3 z-30 flex items-center gap-2 sm:left-5 sm:top-5">
+      <button class="map-action layers-action" :aria-expanded="layersOpen" @click="layersOpen = !layersOpen"><img src="/figma/layers.svg" width="29" height="29" alt="" />Capas</button>
+      <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
+    </div>
 
-    <MapLayersControl v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" :layers="layers" @toggle="toggleLayer" />
-    <MapCitizenReportControl v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
-    <MapInformationPanel v-if="!placingReport" v-model="infoOpen" />
+    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" @toggle="toggleLayer" />
+    <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapElevationLegend v-if="!placingReport" :layers="layers" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 
@@ -189,3 +188,10 @@ onBeforeUnmount(() => {
     <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
   </div>
 </template>
+
+<style scoped>
+.map-action { display: flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 24px; color: white; font-size: 13px; font-weight: 500; box-shadow: 0 3px 4px #0003; cursor: pointer; }
+.layers-action { background: #1a2741; padding-left: 10px; }
+.report-action { background: #c93636; }
+.map-action:hover { filter: brightness(1.1); }
+</style>

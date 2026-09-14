@@ -4,7 +4,6 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   css: [
-    '@fontsource-variable/instrument-sans/index.css',
     '@fontsource/ibm-plex-mono/400.css',
     'maplibre-gl/dist/maplibre-gl.css',
     '~/assets/css/main.css',

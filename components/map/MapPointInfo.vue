@@ -96,28 +96,23 @@ function detailValueClass(key: string) {
 </script>
 
 <template>
-  <section class="surface-panel overflow-auto rounded-2xl p-4" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite" @click.stop @dblclick.stop @mousedown.stop @touchstart.stop>
+  <section class="surface-panel overflow-auto rounded-2xl p-4" :style="isCitizenReport ? { background: '#f7f7f7', padding: '20px 22px' } : undefined" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite" @click.stop @dblclick.stop @mousedown.stop @touchstart.stop>
     <header class="flex items-start justify-between gap-4">
       <div class="min-w-0">
         <p v-if="!isCitizenReport" class="ui-label text-river">Consulta en el mapa</p>
-        <h2 class="text-lg font-semibold tracking-[-.02em]" :class="!isCitizenReport ? 'mt-1' : ''">{{ point.feature?.layerLabel ?? 'Ubicación consultada' }}</h2>
+        <h2 class="font-bold" :class="isCitizenReport ? 'flex items-start gap-1 text-base leading-[19px]' : 'mt-1 text-lg'"><img v-if="isCitizenReport" :src="isGraveReport ? '/figma/grave.svg' : '/figma/medio.svg'" :alt="isGraveReport ? 'Riesgo grave' : 'Riesgo medio'" width="23" height="23" class="size-[23px] shrink-0" />{{ point.feature?.layerLabel ?? 'Ubicación consultada' }}</h2>
       </div>
       <button type="button" class="grid size-9 shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink/65 transition hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-river" aria-label="Cerrar información" @click.stop="$emit('close')"><X :size="18"/></button>
     </header>
 
-    <div v-if="point.feature && isCitizenReport" class="mt-4">
-      <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" :class="isGraveReport ? 'bg-[#fff5f5]' : 'bg-[#fff9e8]'">
-        <span class="ui-label text-[8px]" :class="isGraveReport ? 'text-[#b9312b]' : 'text-[#8a650c]'">Severidad</span>
-        <span class="text-xs font-semibold" :class="isGraveReport ? 'text-[#b9312b]' : 'text-[#8a650c]'">{{ point.feature.properties.severityLabel ?? point.feature.properties.severity }}</span>
-      </div>
-
-      <a v-if="point.feature.properties.photoUrl" :href="String(point.feature.properties.photoUrl)" target="_blank" rel="noopener noreferrer" class="mt-3 block overflow-hidden rounded-xl border border-ink/10 bg-mist">
-        <img :src="String(point.feature.properties.photoUrl)" :alt="`Foto del reclamo: ${point.feature.layerLabel}`" class="max-h-52 w-full object-cover"/>
+    <div v-if="point.feature && isCitizenReport" class="mt-2">
+      <a v-if="point.feature.properties.photoUrl" :href="String(point.feature.properties.photoUrl)" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-[20px] bg-mist">
+        <img :src="String(point.feature.properties.photoUrl)" :alt="`Foto del reclamo: ${point.feature.layerLabel}`" class="h-52 w-full object-cover"/>
       </a>
 
       <div class="mt-3">
-        <p class="ui-label text-[8px] text-ink/40">Descripción</p>
-        <p class="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-ink/72">{{ point.feature.properties.description || 'Sin descripción' }}</p>
+        <p class="text-xs tracking-[1.2px] uppercase">Descripción</p>
+        <p class="mt-1.5 whitespace-pre-wrap text-sm font-medium leading-[22px]">{{ point.feature.properties.description || 'Sin descripción' }}</p>
       </div>
     </div>
 

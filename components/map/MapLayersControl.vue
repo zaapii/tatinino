@@ -1,77 +1,80 @@
 <script setup lang="ts">
-import { Layers3, X, Info } from 'lucide-vue-next'
 import type { MapLayerDefinition } from '~/types/map'
-
-const props = defineProps<{ layers: MapLayerDefinition[] }>()
+import { reportDesignOrder } from '~/utils/reportDesign'
+const props = defineProps<{ layers: MapLayerDefinition[], hideTrigger?: boolean }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
 const baseMap = defineModel<'simple' | 'satellite'>('baseMap', { default: 'simple' })
+const reportTopics = defineModel<string[]>('reportTopics', { default: () => [...reportDesignOrder] })
 const expandedInfoId = ref<string | null>(null)
-
-const formatCount = (count: number) => new Intl.NumberFormat('es-AR').format(count)
+const reportsExpanded = ref(true)
+const order = ['citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
+const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)))
 </script>
 
 <template>
-  <div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 sm:inset-auto sm:bottom-auto sm:left-5 sm:top-[132px] sm:p-0">
-    <button v-if="!open" class="pointer-events-auto flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-ink-soft" @click="open = true">
-      <Layers3 :size="18" /> Capas
-    </button>
+  <div class="pointer-events-none absolute inset-x-0 top-[62px] z-30 px-3 sm:inset-auto sm:left-5 sm:top-[70px] sm:p-0">
+    <button v-if="!open && !hideTrigger" class="layers-trigger pointer-events-auto" @click="open = true"><img src="/figma/layers.svg" width="29" height="29" alt="" /> Capas</button>
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
-      <section v-if="open" class="surface-panel pointer-events-auto max-h-[76dvh] w-full overflow-auto rounded-2xl p-4 sm:w-[350px]" aria-label="Control de capas">
-        <header class="flex items-center justify-between border-b border-ink/10 pb-3">
-          <div class="flex items-center gap-2"><Layers3 :size="18" class="text-river"/><h2 class="font-semibold">Capas del mapa</h2></div>
-          <button class="grid size-8 place-items-center rounded-lg hover:bg-mist" aria-label="Cerrar capas" @click="open = false"><X :size="18"/></button>
-        </header>
-        <div class="space-y-5 py-3">
-          <fieldset>
-            <legend class="ui-label mb-2 text-ink/55">Mapa base</legend>
-            <div class="flex gap-2">
-              <label v-for="option in [{ value: 'simple', label: 'Simple' }, { value: 'satellite', label: 'Satélite' }]" :key="option.value" class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-ink/15 px-3 py-3 text-xs font-semibold has-checked:border-river has-checked:bg-river/10">
-                <input v-model="baseMap" type="radio" name="base-map" :value="option.value" class="accent-river" />{{ option.label }}
-              </label>
-            </div>
-          </fieldset>
-          <section>
-            <div class="divide-y divide-ink/8">
-              <div v-for="layer in props.layers" :key="layer.id" class="flex gap-3 py-3">
-                <button role="switch" :aria-label="`${layer.enabled ? 'Ocultar' : 'Mostrar'} ${layer.label}`" :aria-checked="layer.enabled" :disabled="layer.status === 'soon'" class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition disabled:cursor-not-allowed" :class="layer.enabled ? 'bg-river' : 'bg-ink/14'" @click="emit('toggle', layer.id)">
-                  <span class="absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-all" :class="layer.enabled ? 'left-[18px]' : 'left-0.5'" />
-                </button>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="flex min-w-0 items-center gap-2 text-sm font-semibold leading-snug">
-                      <span v-if="layer.id === 'citizen-reports'" class="flex shrink-0 gap-0.5" aria-label="Grave en rojo; medio en amarillo"><span class="size-2 rounded-full bg-[#d94841]"/><span class="size-2 rounded-full bg-[#e0ad2f]"/></span>
-                      <span v-else-if="layer.source || layer.color" class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: layer.source?.color ?? layer.color }"/>
-                      {{ layer.label }}
-                    </p>
-                    <div class="flex shrink-0 items-center gap-1.5">
-                      <span v-if="layer.status === 'soon'" class="ui-label rounded-full bg-ink/5 px-2 py-1 text-[8px] text-ink/42">Próx.</span>
-                      <span v-else-if="layer.source" class="font-mono text-[9px] text-ink/38">{{ formatCount(layer.source.featureCount) }}</span>
-                      <span v-else-if="layer.id === 'citizen-reports'" class="ui-label rounded-full bg-[#d94841]/10 px-2 py-1 text-[8px] text-[#b9312b]">Público</span>
-                      <span v-else-if="layer.id === 'river-levels'" class="ui-label rounded-full bg-river/10 px-2 py-1 text-[8px] text-river">INA</span>
-                      <span v-else class="ui-label rounded-full bg-river/8 px-2 py-1 text-[8px] text-river">Base</span>
-                      <button
-                        class="grid size-7 place-items-center rounded-lg text-ink/45 transition hover:bg-river/8 hover:text-river"
-                        :class="expandedInfoId === layer.id ? 'bg-river/10 text-river' : ''"
-                        :aria-expanded="expandedInfoId === layer.id"
-                        :aria-label="`Información sobre ${layer.label}`"
-                        @click="expandedInfoId = expandedInfoId === layer.id ? null : layer.id"
-                      ><Info :size="15"/></button>
-                    </div>
-                  </div>
-                  <Transition enter-active-class="transition duration-150" enter-from-class="-translate-y-1 opacity-0" leave-active-class="transition duration-100" leave-to-class="-translate-y-1 opacity-0">
-                    <div v-if="expandedInfoId === layer.id" class="mt-2 rounded-lg bg-mist px-3 py-2.5">
-                      <p class="ui-label text-[8px] text-river">Resumen provisional</p>
-                      <p class="mt-1 text-[11px] leading-relaxed text-ink/58">{{ layer.description }}</p>
-                    </div>
-                  </Transition>
-                </div>
-              </div>
-            </div>
-          </section>
+      <section v-if="open" class="layers-panel pointer-events-auto" aria-label="Control de capas">
+        <header class="layers-header"><h2>Capas del mapa</h2><button aria-label="Cerrar capas" @click="open = false"><img src="/figma/close.svg" width="21" height="21" alt="" /></button></header>
+        <fieldset class="base-options" aria-label="Mapa base">
+          <label v-for="option in [{ value: 'simple', label: 'Simple' }, { value: 'satellite', label: 'Satélite' }]" :key="option.value">
+            <input v-model="baseMap" type="radio" name="base-map" :value="option.value" />{{ option.label }}
+          </label>
+        </fieldset>
+        <div v-for="layer in orderedLayers" :key="layer.id" class="layer-section">
+          <div class="layer-row">
+            <button role="switch" :aria-label="`${layer.enabled ? 'Ocultar' : 'Mostrar'} ${layer.label}`" :aria-checked="layer.enabled" :disabled="layer.status === 'soon'" class="layer-switch" @click="emit('toggle', layer.id)"><span /></button>
+            <span v-if="layer.id !== 'water'" class="layer-preview" :class="layer.id" aria-hidden="true">
+              <img v-if="layer.id === 'citizen-reports'" src="/figma/reports.svg" width="28" height="28" alt="" />
+              <img v-else-if="layer.id === 'river-levels'" src="/figma/river.svg" width="24" height="24" alt="" />
+            </span>
+            <span class="layer-label">{{ layer.label }}</span>
+            <button v-if="layer.id === 'citizen-reports'" class="layer-info" :aria-expanded="reportsExpanded" aria-label="Categorías de reclamos" @click="reportsExpanded = !reportsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !reportsExpanded }" /></button>
+            <button v-else-if="layer.id !== 'water'" class="layer-info" :aria-expanded="expandedInfoId === layer.id" :aria-label="`Información sobre ${layer.label}`" @click="expandedInfoId = expandedInfoId === layer.id ? null : layer.id"><img src="/figma/info.svg" width="15" height="15" alt="" /></button>
+          </div>
+          <div v-if="layer.id === 'citizen-reports' && reportsExpanded" class="report-categories">
+            <label v-for="topic in reportDesignOrder" :key="topic"><input v-model="reportTopics" type="checkbox" :value="topic" :disabled="!layer.enabled" /><MapReportDesignIcon :topic="topic"/><span>{{ topic === 'Desague tapado' ? 'Desagüe tapado' : topic }}</span></label>
+          </div>
+          <p v-if="expandedInfoId === layer.id" class="layer-description">{{ layer.description }}</p>
         </div>
-        <p class="mt-2 flex gap-2 rounded-xl bg-mist p-3 text-[11px] leading-relaxed text-ink/58"><Info :size="15" class="mt-0.5 shrink-0 text-river"/> Las capas se cargan al activarlas. Las cifras indican la cantidad de elementos de cada fuente.</p>
       </section>
     </Transition>
   </div>
 </template>
+
+<style scoped>
+.layers-trigger { display: flex; align-items: center; gap: 8px; border-radius: 24px; background: #1a2741; color: white; padding: 5px 18px 5px 12px; font-size: 13px; box-shadow: 0 3px 5px #0003; }
+.layers-panel { width: 370px; max-width: 100%; max-height: calc(100dvh - 160px); overflow: auto; padding: 16px 14px 24px; border-radius: 12px; background: #f7f7f7; color: #1a2741; box-shadow: 0 8px 24px #0003; }
+.layers-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 16px; border-bottom: 1.5px solid #dcdcda; }
+.layers-header h2 { font-size: 16px; font-weight: 700; }
+.layers-header button, .layer-info { display: grid; place-items: center; min-width: 28px; min-height: 28px; cursor: pointer; }
+.base-options { display: flex; gap: 8px; padding: 16px 18px; background: #fefefe; }
+.base-options label { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 12px 8px; border: 1px solid #d6d9df; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.base-options label:has(:checked) { border-color: #4ba6de; background: #4ba6de18; }
+.base-options input { accent-color: #4ba6de; }
+.layer-section { border-top: .7px solid #dcdcda; background: #fefefe; }
+.layer-section:last-child { border-bottom: 1.5px solid #dcdcda; }
+.layer-row { display: flex; align-items: center; gap: 10px; min-height: 49px; padding: 8px 10px; }
+.layer-label { flex: 1; font-size: 12px; font-weight: 700; line-height: 17px; }
+.layer-switch { position: relative; width: 25px; height: 14px; flex-shrink: 0; border-radius: 10px; background: #bcc3cc; cursor: pointer; }
+.layer-switch[aria-checked=true] { background: #4ba6de; }
+.layer-switch span { position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%; background: white; transition: transform .15s; }
+.layer-switch[aria-checked=true] span { transform: translateX(11px); }
+.layer-preview { display: inline-flex; align-items: center; justify-content: center; width: 25px; flex-shrink: 0; border-radius: 1px; }
+.layer-preview.defenses { height: 8px; background: #ba6a47; }
+.layer-preview.reservoirs { height: 16px; background: #91b5c3; border: 1px solid #2f82a2; }
+.layer-preview.channels { height: 8px; background: #198c8e; }
+.layer-preview.renabap-neighborhoods { height: 16px; background: #cf9cb0; }
+.layer-preview.pumping::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #dda52d; }
+.layer-preview.basins { height: 16px; border: 1.5px dashed #4b6d89; }
+.layer-preview.sub-basins { height: 16px; border: .7px dashed #4b6d89; }
+.layer-preview.river-levels { background: #4ba6de; border-radius: 4px; }
+.report-categories { padding: 0 8px 14px 58px; }
+.report-categories label { display: flex; align-items: center; gap: 6px; min-height: 31px; font-size: 12px; line-height: 16px; cursor: pointer; }
+.report-categories input { width: 12px; height: 12px; flex-shrink: 0; accent-color: #1a2741; }
+.report-categories label:has(:disabled) { opacity: .5; }
+.layer-description { margin: 0 10px 12px 45px; font-size: 11px; line-height: 17px; }
+@media (max-width: 639px) { .layers-panel { width: 100%; } }
+</style>

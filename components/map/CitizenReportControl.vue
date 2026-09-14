@@ -6,6 +6,7 @@ import { useReportAddressLookup } from '~/composables/useReportAddressLookup'
 import { citizenReportCategories } from '~/utils/citizenReportCategories'
 
 const props = defineProps<{
+  hideTrigger?: boolean
   location: MapPoint | null
   selectingLocation: boolean
 }>()
@@ -231,8 +232,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="pointer-events-none absolute bottom-0 left-[112px] z-30 p-3 sm:bottom-auto sm:left-5 sm:p-0" :class="open ? 'sm:top-[132px]' : 'sm:top-[188px]'">
-    <button v-if="!open && !selectingLocation" class="pointer-events-auto flex items-center gap-2 rounded-xl bg-[#d94841] px-3.5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#c93a34] sm:px-4" @click="open = true">
+  <div class="pointer-events-none absolute bottom-0 left-[112px] z-30 p-3 sm:bottom-auto sm:left-5 sm:p-0" :class="open ? 'sm:top-[70px]' : 'sm:top-[70px]'">
+    <button v-if="!open && !selectingLocation && !hideTrigger" class="pointer-events-auto flex items-center gap-2 rounded-xl bg-[#d94841] px-3.5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#c93a34] sm:px-4" @click="open = true">
       <MessageSquareWarning :size="18"/><span class="sm:hidden">Reclamo</span><span class="hidden sm:inline">Cargá tu reclamo</span>
     </button>
 

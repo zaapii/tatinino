@@ -2,42 +2,21 @@
 const route = useRoute()
 const normalizedPath = computed(() => route.path.replace(/\/+$/, '') || '/')
 const isMap = computed(() => route.name === 'mapa' || normalizedPath.value === '/mapa' || normalizedPath.value === '/')
-const sidebarCollapsed = ref(false)
-const sidebarStorageKey = 'public-sidebar-collapsed'
-
-onMounted(() => {
-  try {
-    sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
-  }
-  catch {
-    // La preferencia es opcional; la navegación sigue funcionando sin almacenamiento local.
-  }
-})
-
-function toggleSidebar() {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-
-  try {
-    localStorage.setItem(sidebarStorageKey, String(sidebarCollapsed.value))
-  }
-  catch {
-    // La preferencia se conserva solo durante esta visita si el navegador bloquea localStorage.
-  }
-}
+const policyOpen = ref(false)
 </script>
 
 <template>
+  <MapHero v-if="isMap" />
   <div
-    class="min-h-dvh bg-paper lg:grid"
-    :class="[
-      sidebarCollapsed ? 'lg:grid-cols-[80px_minmax(0,1fr)]' : 'lg:grid-cols-[268px_minmax(0,1fr)]',
-      isMap ? 'transition-none' : 'transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none',
-    ]"
+    id="mapa-interactivo"
+    class="min-h-dvh bg-paper lg:grid lg:grid-cols-[154px_minmax(0,1fr)]"
+
   >
-    <AppSidebar class="hidden lg:flex" :collapsed="sidebarCollapsed" @toggle="toggleSidebar" />
-    <MobileNavigation class="lg:hidden" />
+    <AppSidebar class="hidden lg:flex" @policy="policyOpen = true" />
+    <MobileNavigation class="lg:hidden" @policy="policyOpen = true" />
     <main :class="isMap ? 'h-dvh overflow-hidden pt-16 lg:pt-0' : 'min-w-0 pt-16 lg:pt-0'">
       <slot />
     </main>
   </div>
+  <DataPolicyModal v-model="policyOpen" />
 </template>

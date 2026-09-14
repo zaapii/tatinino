@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #092235;
+  --color-ink: #1a2741;
   --color-ink-soft: #173d52;
-  --color-river: #1c9eda;
+  --color-river: #4ba6de;
   --color-river-light: #78ccef;
   --color-river-ink: #0877ad;
   --color-mist: #edf4f3;
   --color-sand: #f3b85b;
   --color-paper: #f8faf9;
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Golos Text", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
@@ -77,3 +77,8 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+@font-face { font-family: "Golos Text"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/golos-text-400.ttf") format("truetype"); }
+@font-face { font-family: "Golos Text"; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/golos-text-500.ttf") format("truetype"); }
+@font-face { font-family: "Golos Text"; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/golos-text-600.ttf") format("truetype"); }
+@font-face { font-family: "Golos Text"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/golos-text-700.ttf") format("truetype"); }
