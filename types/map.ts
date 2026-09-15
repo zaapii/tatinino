@@ -3,6 +3,24 @@ export type MapPoint = {
   latitude: number
 }
 
+export type BaseMapKind = 'simple' | 'satellite' | 'recent'
+
+export type SatelliteScene = {
+  id: string
+  provider: 'copernicus'
+  collection: 'sentinel-2-l2a'
+  productId: string
+  capturedAt: string
+  cloudCover: number | null
+  publicUrl: string
+  bounds: {
+    west: number
+    south: number
+    east: number
+    north: number
+  }
+}
+
 export type MapFeatureInfo = {
   layerId: string
   layerLabel: string

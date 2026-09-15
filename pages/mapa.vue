@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportDesignOrder } from '~/utils/reportDesign'
 import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
-import type { CitizenReport, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
+import type { BaseMapKind, CitizenReport, MapPoint, MapSelection, RiverLevelReading, SatelliteScene } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
@@ -13,7 +13,8 @@ useSeoMeta({
 const { layers, toggleLayer } = useMapLayers()
 const selectedPoint = ref<MapSelection | null>(null)
 const layersOpen = ref(false)
-const baseMap = ref<'simple' | 'satellite'>('simple')
+const baseMap = ref<BaseMapKind>('simple')
+const recentSatelliteScene = ref<SatelliteScene | null>(null)
 const reportOpen = ref(false)
 const infoOpen = ref(false)
 const mapReady = ref(false)
@@ -34,6 +35,7 @@ watch(reportTopics, () => { if (selectedPoint.value?.feature?.layerId === 'citiz
 const riverLevels = ref<RiverLevelReading[]>([])
 const { fetchReports, subscribeToReports } = useCitizenReports()
 const { fetchRiverLevels } = useRiverLevels()
+const { fetchLatestSatelliteScene } = useSatelliteImagery()
 let stopReportSubscription: (() => void) | undefined
 let reportRefreshTimer: ReturnType<typeof setInterval> | undefined
 let riverLevelRefreshTimer: ReturnType<typeof setInterval> | undefined
@@ -119,6 +121,9 @@ onMounted(() => {
     .catch(error => reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.')
     .finally(() => reportsLoading.value = false)
   void syncRiverLevels()
+  void fetchLatestSatelliteScene()
+    .then(scene => { recentSatelliteScene.value = scene })
+    .catch(() => undefined)
   window.addEventListener('focus', refreshReportsOnFocus)
   reportRefreshTimer = setInterval(() => void syncApprovedReports(true).catch(() => undefined), 30_000)
   riverLevelRefreshTimer = setInterval(() => void syncRiverLevels(true), 30 * 60_000)
@@ -139,6 +144,7 @@ onBeforeUnmount(() => {
         :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
         @selection-closed="selectedPoint = null"
         :base-map="baseMap"
+        :recent-satellite-scene="recentSatelliteScene"
         :water-visible="waterVisible"
         :layers="layers"
         :reports="filteredReports"
@@ -165,7 +171,7 @@ onBeforeUnmount(() => {
       <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
     </div>
 
-    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
+    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" :recent-imagery-available="Boolean(recentSatelliteScene)" @toggle="toggleLayer" />
     <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 

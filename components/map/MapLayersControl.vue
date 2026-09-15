@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import type { MapLayerDefinition } from '~/types/map'
+import type { BaseMapKind, MapLayerDefinition } from '~/types/map'
 import { reportDesignOrder } from '~/utils/reportDesign'
-const props = defineProps<{ layers: MapLayerDefinition[], reportCount?: number, hideTrigger?: boolean }>()
+const props = defineProps<{ layers: MapLayerDefinition[], reportCount?: number, hideTrigger?: boolean, recentImageryAvailable?: boolean }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
-const baseMap = defineModel<'simple' | 'satellite'>('baseMap', { default: 'simple' })
+const baseMap = defineModel<BaseMapKind>('baseMap', { default: 'simple' })
 const reportTopics = defineModel<string[]>('reportTopics', { default: () => [...reportDesignOrder] })
 const expandedInfoId = ref<string | null>(null)
 const reportsExpanded = ref(true)
 const order = ['citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
 const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)))
+const baseMapOptions = computed(() => [
+  { value: 'simple' as const, label: 'Simple' },
+  { value: 'satellite' as const, label: 'Detallado' },
+  ...(props.recentImageryAvailable ? [{ value: 'recent' as const, label: 'Reciente' }] : []),
+])
 </script>
 
 <template>
@@ -19,7 +24,7 @@ const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.inde
       <section v-if="open" class="layers-panel pointer-events-auto" aria-label="Control de capas">
         <header class="layers-header"><h2>Capas del mapa</h2><button aria-label="Cerrar capas" @click="open = false"><img src="/figma/close.svg" width="21" height="21" alt="" /></button></header>
         <fieldset class="base-options" aria-label="Mapa base">
-          <label v-for="option in [{ value: 'simple', label: 'Simple' }, { value: 'satellite', label: 'Satélite' }]" :key="option.value">
+          <label v-for="option in baseMapOptions" :key="option.value">
             <input v-model="baseMap" type="radio" name="base-map" :value="option.value" />{{ option.label }}
           </label>
         </fieldset>

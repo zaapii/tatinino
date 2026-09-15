@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
-import type { CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
+import type { BaseMapKind, CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading, SatelliteScene } from '~/types/map'
 import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 import type { Popup } from 'maplibre-gl'
@@ -18,7 +18,8 @@ const emit = defineEmits<{
 
 const props = defineProps<{
   selectedReport: MapSelection | null
-  baseMap: 'simple' | 'satellite'
+  baseMap: BaseMapKind
+  recentSatelliteScene: SatelliteScene | null
   waterVisible: boolean
   layers: MapLayerDefinition[]
   reports: CitizenReport[]
@@ -41,6 +42,16 @@ const satelliteDate = ref('Consultando fecha…')
 let imageryTimer: ReturnType<typeof setTimeout> | undefined
 let imageryRequest: AbortController | undefined
 let reportPulseTimer: ReturnType<typeof setInterval> | undefined
+let recentSatelliteSceneId: string | undefined
+const recentMaxUsefulZoom = 14
+const recentDetailFallbackActive = ref(false)
+
+const recentSatelliteDate = computed(() => {
+  if (!props.recentSatelliteScene) return ''
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(props.recentSatelliteScene.capturedAt))
+})
 
 function scheduleImageryDate() {
   clearTimeout(imageryTimer)
@@ -129,7 +140,7 @@ function syncReportPopup() {
 function updateBaseMap() {
   scheduleImageryDate()
   if (!map || !styleReady) return
-  if (props.baseMap === 'satellite' && !map.getSource('satellite')) {
+  if ((props.baseMap === 'satellite' || props.baseMap === 'recent') && !map.getSource('satellite')) {
     map.addSource('satellite', {
       type: 'raster',
       tiles: [`${SATELLITE_SERVICE}/tile/{z}/{y}/{x}`],
@@ -140,7 +151,55 @@ function updateBaseMap() {
     const firstOverlay = map.getStyle().layers.find(layer => !initialBaseLayers.has(layer.id))?.id
     map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite' }, firstOverlay)
   }
-  if (map.getLayer('satellite')) map.setLayoutProperty('satellite', 'visibility', props.baseMap === 'satellite' && props.waterVisible ? 'visible' : 'none')
+  // Image sources start downloading as soon as they are added to MapLibre.
+  // Keep Sentinel-2 lazy so visitors who never choose "Reciente" do not spend Storage egress.
+  if (props.baseMap === 'recent') syncRecentSatelliteSource()
+  syncRecentZoomVisibility()
+}
+
+function syncRecentZoomVisibility() {
+  if (!map || !styleReady) return
+  const useDetailedFallback = props.baseMap === 'recent' && map.getZoom() >= recentMaxUsefulZoom
+  recentDetailFallbackActive.value = useDetailedFallback
+  if (map.getLayer('satellite')) {
+    const satelliteVisible = props.baseMap === 'satellite' || useDetailedFallback
+    map.setLayoutProperty('satellite', 'visibility', satelliteVisible && props.waterVisible ? 'visible' : 'none')
+  }
+  if (map.getLayer('recent-satellite')) {
+    map.setLayoutProperty('recent-satellite', 'visibility', props.baseMap === 'recent' && !useDetailedFallback && props.waterVisible ? 'visible' : 'none')
+  }
+}
+
+function syncRecentSatelliteSource() {
+  if (!map || !styleReady) return
+  const scene = props.recentSatelliteScene
+  if (recentSatelliteSceneId === scene?.id && map.getSource('recent-satellite')) return
+
+  if (map.getLayer('recent-satellite')) map.removeLayer('recent-satellite')
+  if (map.getSource('recent-satellite')) map.removeSource('recent-satellite')
+  recentSatelliteSceneId = undefined
+  if (!scene) return
+
+  map.addSource('recent-satellite', {
+    type: 'image',
+    url: scene.publicUrl,
+    coordinates: [
+      [scene.bounds.west, scene.bounds.north],
+      [scene.bounds.east, scene.bounds.north],
+      [scene.bounds.east, scene.bounds.south],
+      [scene.bounds.west, scene.bounds.south],
+    ],
+  })
+  const firstOverlay = map.getStyle().layers.find(layer => !initialBaseLayers.has(layer.id))?.id
+  map.addLayer({
+    id: 'recent-satellite',
+    type: 'raster',
+    source: 'recent-satellite',
+    maxzoom: recentMaxUsefulZoom,
+    layout: { visibility: props.baseMap === 'recent' && props.waterVisible ? 'visible' : 'none' },
+    paint: { 'raster-fade-duration': 180 },
+  }, firstOverlay)
+  recentSatelliteSceneId = scene.id
 }
 const initialBaseLayers = new Set<string>()
 
@@ -154,9 +213,6 @@ const riverLevelLabelLayerId = 'river-levels-label'
 const riverLevelAlertLabelLayerId = 'river-levels-alert-label'
 const riverLevelEvacuationLabelLayerId = 'river-levels-evacuation-label'
 const riverLevelReferenceLayerId = 'river-levels-reference-label'
-const riverLevelReferencePointSourceId = 'river-level-reference-points'
-const riverLevelReferencePointLayerId = 'river-level-reference-points-symbol'
-const riverLevelReferencePointLabelLayerId = 'river-level-reference-points-label'
 const riverLevelMarkerImageId = 'river-level-marker'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
@@ -184,12 +240,12 @@ const riverStatusColors: Record<RiverLevelReading['status'], string> = {
   unknown: '#78909c',
 }
 
-const riverReferenceDefinitions: Array<{ readingId: string, mapNames: string[], points: [number, number][] }> = [
-  { readingId: 'parana', mapNames: ['Río Paraná'], points: [[-60.573, -31.574], [-60.565, -31.684]] },
-  { readingId: 'santa-fe', mapNames: ['Laguna Setúbal'], points: [[-60.668, -31.602], [-60.676, -31.664]] },
-  { readingId: 'salado-recreo', mapNames: ['Río Salado'], points: [[-60.779, -31.523], [-60.755, -31.582]] },
-  { readingId: 'salado-santo-tome', mapNames: [], points: [[-60.774, -31.635], [-60.757, -31.704]] },
-  { readingId: 'colastine-rn-168', mapNames: ['Río Colastiné'], points: [[-60.615, -31.592], [-60.603, -31.665]] },
+const riverReferenceDefinitions: Array<{ readingId: string, mapNames: string[] }> = [
+  { readingId: 'parana', mapNames: ['Río Paraná'] },
+  { readingId: 'santa-fe', mapNames: ['Laguna Setúbal'] },
+  { readingId: 'salado-recreo', mapNames: ['Río Salado'] },
+  { readingId: 'salado-santo-tome', mapNames: [] },
+  { readingId: 'colastine-rn-168', mapNames: ['Río Colastiné'] },
 ]
 
 const levelFormatter = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -576,21 +632,6 @@ function riverLevelGeoJson() {
   }
 }
 
-function riverReferencePointGeoJson() {
-  return {
-    type: 'FeatureCollection' as const,
-    features: riverReferenceDefinitions.flatMap(definition => {
-      const reading = props.riverLevels.find(item => item.id === definition.readingId)
-      if (!reading) return []
-      return definition.points.map((coordinates, index) => ({
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates },
-        properties: { ...riverReadingProperties(reading), id: `${reading.id}-reference-${index}`, isRiverReference: true },
-      }))
-    }),
-  }
-}
-
 function addRiverLevelMarkerImage() {
   if (!map || map.hasImage(riverLevelMarkerImageId)) return
   const currentMap = map
@@ -757,59 +798,17 @@ function addRiverLevelLayers() {
     })
   }
   addRiverLevelReferenceLayer()
-  if (!map.getSource(riverLevelReferencePointSourceId)) map.addSource(riverLevelReferencePointSourceId, { type: 'geojson', data: riverReferencePointGeoJson() })
-  if (!map.getLayer(riverLevelReferencePointLayerId)) {
-    map.addLayer({
-      id: riverLevelReferencePointLayerId,
-      source: riverLevelReferencePointSourceId,
-      type: 'symbol',
-      minzoom: 10,
-      layout: {
-        visibility,
-        'icon-image': riverLevelMarkerImageId,
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.62, 16, 0.86],
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
-      },
-    })
-  }
-  if (!map.getLayer(riverLevelReferencePointLabelLayerId)) {
-    map.addLayer({
-      id: riverLevelReferencePointLabelLayerId,
-      source: riverLevelReferencePointSourceId,
-      type: 'symbol',
-      minzoom: 10,
-      layout: {
-        visibility,
-        'text-field': ['concat', ['get', 'riverName'], '\n', ['get', 'levelLabel']],
-        'text-font': ['Open Sans Regular'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 15, 11.5],
-        'text-offset': [0, 1.75],
-        'text-anchor': 'top',
-        'text-line-height': 1.15,
-        'text-padding': 4,
-        'text-allow-overlap': true,
-        'text-ignore-placement': true,
-      },
-      paint: {
-        'text-color': '#073b58',
-        'text-halo-color': 'rgba(255, 255, 255, .98)',
-        'text-halo-width': 2,
-      },
-    })
-  }
 }
 
 function updateRiverLevelData() {
   if (!map) return
   ;(map.getSource(riverLevelSourceId) as GeoJSONSource | undefined)?.setData(riverLevelGeoJson())
-  ;(map.getSource(riverLevelReferencePointSourceId) as GeoJSONSource | undefined)?.setData(riverReferencePointGeoJson())
   updateRiverLevelReferenceLayer()
 }
 
 function updateRiverLevelVisibility(visible: boolean) {
   if (!map || !styleReady) return
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, riverLevelReferencePointLabelLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId]) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
   }
 }
@@ -932,7 +931,7 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, riverLevelReferencePointLayerId, riverLevelReferencePointLabelLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }
@@ -942,7 +941,7 @@ function renderedSelectableLayerIds() {
   const hydraulic = props.layers.flatMap(layer => styleIdsFor(layer.id)).filter(id => map?.getLayer(id))
   const specialLayers: string[] = []
   if (map.getLayer(reportPointLayerId) && props.reportsVisible) specialLayers.push(reportPointLayerId)
-  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId, riverLevelReferencePointLayerId, riverLevelReferenceLayerId)
+  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId, riverLevelReferenceLayerId)
   return [...specialLayers, ...hydraulic]
 }
 
@@ -1014,17 +1013,6 @@ function featureInfo(feature: MapGeoJSONFeature) {
     }
   }
 
-  if (feature.source === riverLevelReferencePointSourceId) {
-    return {
-      layerId: riverLevelSourceId,
-      layerLabel: String(properties.riverName ?? 'Nivel del río'),
-      color: '#55c3e9',
-      geometryType: feature.geometry.type,
-      sourceFile: String(properties.dataUrl ?? ''),
-      properties,
-    }
-  }
-
   const layerId = feature.source.replace('hydraulic-', '')
   const definition = props.layers.find(layer => layer.id === layerId)
   if (!definition?.source) return undefined
@@ -1043,6 +1031,10 @@ watch(() => props.waterVisible, updateBaseVisibility)
 watch(() => props.selectedReport, syncReportPopup)
 watch(() => props.selectedReport, scheduleImageryDate)
 watch(() => props.baseMap, updateBaseMap)
+watch(() => props.recentSatelliteScene?.id, () => {
+  if (props.baseMap === 'recent' && !props.recentSatelliteScene) return
+  updateBaseMap()
+})
 watch(() => props.reportsVisible, updateReportVisibility)
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
 watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), updateReportData)
@@ -1091,6 +1083,7 @@ onMounted(async () => {
     startReportPulse()
     addRiverLevelLayers()
     updateBaseMap()
+    map?.on('zoom', syncRecentZoomVisibility)
     const mobile = window.innerWidth < 640
     map?.fitBounds(mobile ? [[-60.78, -31.72], [-60.62, -31.55]] : [[-60.82, -31.76], [-60.55, -31.49]], {
       padding: { top: mobile ? 72 : 116, right: 24, bottom: 72, left: 24 },
@@ -1194,6 +1187,16 @@ onBeforeUnmount(() => {
   <div v-if="baseMap === 'satellite' && waterVisible && !placingReport" class="pointer-events-none absolute bottom-24 left-1/2 z-20 w-max max-w-[calc(100%-32px)] -translate-x-1/2 rounded-xl border border-ink/10 bg-white/95 px-3 py-2 text-center shadow-sm" aria-live="polite">
     <p class="text-xs font-semibold text-ink">{{ satelliteDate }}</p>
     <p class="mt-0.5 text-[10px] text-ink/60">Esri · {{ selectedReport ? 'Ubicación del reclamo' : 'Centro del mapa' }} · La fecha varía según la zona</p>
+  </div>
+  <div v-else-if="baseMap === 'recent' && recentSatelliteScene && waterVisible && !placingReport" class="pointer-events-none absolute bottom-24 left-1/2 z-20 w-max max-w-[calc(100%-32px)] -translate-x-1/2 rounded-xl border border-ink/10 bg-white/95 px-3 py-2 text-center shadow-sm" aria-live="polite">
+    <template v-if="recentDetailFallbackActive">
+      <p class="text-xs font-semibold text-ink">Vista detallada activada</p>
+      <p class="mt-0.5 text-[10px] text-ink/60">Esri · Alejá el mapa para ver Sentinel-2 del {{ recentSatelliteDate }}</p>
+    </template>
+    <template v-else>
+      <p class="text-xs font-semibold text-ink">Captura: {{ recentSatelliteDate }}</p>
+      <p class="mt-0.5 text-[10px] text-ink/60">Copernicus Sentinel-2 · 10 m/píxel<span v-if="recentSatelliteScene.cloudCover !== null"> · Nubosidad de escena {{ Math.round(recentSatelliteScene.cloudCover) }}%</span></p>
+    </template>
   </div>
 </template>
 
