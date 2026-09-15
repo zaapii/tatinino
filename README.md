@@ -92,7 +92,7 @@ La portada, las tarjetas y la plantilla de lectura consumen el mismo objeto de a
 La migración `20260915120000_create_satellite_imagery_cache.sql` crea el bucket público
 `satellite-imagery`, la tabla `satellite_scenes` y una tarea diaria a las 22:00 UTC. La Edge
 Function `update-satellite-imagery` consulta Copernicus, renderiza una imagen RGB de Santa Fe
-y publica un objeto versionado con caché inmutable.
+a 2500 × 2500 píxeles y calidad JPEG 95, y publica un objeto versionado con caché inmutable.
 
 En el visor, la opción `Reciente` muestra Sentinel-2 hasta zoom 14. A partir de ese nivel cambia
 automáticamente a la imagen detallada de Esri para evitar ampliar los píxeles de 10 metros.

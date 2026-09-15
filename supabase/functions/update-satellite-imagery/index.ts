@@ -5,6 +5,7 @@ const TOKEN_URL = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/pro
 const PROCESS_URL = 'https://sh.dataspace.copernicus.eu/process/v1'
 const STORAGE_BUCKET = 'satellite-imagery'
 const COLLECTION = 'sentinel-2-l2a'
+const RENDER_PROFILE = '2500-q95-v1'
 const BOUNDS = { west: -60.82, south: -31.76, east: -60.55, north: -31.49 }
 const CENTER: [number, number] = [-60.7005, -31.6333]
 
@@ -94,9 +95,9 @@ async function renderScene(scene: StacFeature, accessToken: string) {
         }],
       },
       output: {
-        width: 2048,
-        height: 2048,
-        responses: [{ identifier: 'default', format: { type: 'image/jpeg', quality: 86 } }],
+        width: 2500,
+        height: 2500,
+        responses: [{ identifier: 'default', format: { type: 'image/jpeg', quality: 95 } }],
       },
       evalscript: `//VERSION=3
 function setup() {
@@ -150,7 +151,7 @@ Deno.serve(async (request) => {
 
     const capturedAt = new Date(scene.properties.datetime)
     const safeProductId = scene.id.replace(/[^a-zA-Z0-9_-]/g, '_')
-    const storagePath = `sentinel-2/${capturedAt.getUTCFullYear()}/${String(capturedAt.getUTCMonth() + 1).padStart(2, '0')}/${safeProductId}.jpg`
+    const storagePath = `sentinel-2/${capturedAt.getUTCFullYear()}/${String(capturedAt.getUTCMonth() + 1).padStart(2, '0')}/${safeProductId}-${RENDER_PROFILE}.jpg`
     const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(storagePath, image, {
       contentType: 'image/jpeg', cacheControl: '31536000', upsert: Boolean(existing),
     })
