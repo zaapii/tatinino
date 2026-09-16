@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reportDesignOrder } from '~/utils/reportDesign'
-import { CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
+import { ArrowDown, CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
 import type { BaseMapKind, CitizenReport, MapPoint, MapSelection, RiverLevelReading, SatelliteScene } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
@@ -63,6 +63,13 @@ function setReportLocation(point: MapPoint) {
 function cancelReportLocation() {
   placingReport.value = false
   reportOpen.value = true
+}
+
+function goToMetrics() {
+  document.getElementById('metricas')?.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    block: 'start',
+  })
 }
 
 function upsertReport(report: CitizenReport) {
@@ -138,7 +145,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative h-full overflow-hidden bg-[#dfe9e8]">
+  <div>
+  <section class="relative h-dvh overflow-hidden bg-[#dfe9e8]" aria-label="Mapa interactivo">
     <ClientOnly>
       <MapViewerClient
         :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
@@ -191,6 +199,25 @@ onBeforeUnmount(() => {
     <div v-else-if="riverLevelsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ riverLevelsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="riverLevelsError = ''"><X :size="13"/></button></div>
 
     <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
+
+    <button
+      v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport"
+      type="button"
+      class="metrics-jump"
+      aria-label="Ir a las métricas de impacto, ríos y pronóstico"
+      @click="goToMetrics"
+    >
+      <span>Ver métricas</span>
+      <ArrowDown :size="14" :stroke-width="2.25" />
+    </button>
+  </section>
+  <MapMetrics
+    :reports="reports"
+    :report-count="reports.length"
+    :reports-loading="reportsLoading"
+    :river-levels="riverLevels"
+    :river-levels-loading="riverLevelsLoading"
+  />
   </div>
 </template>
 
@@ -199,4 +226,29 @@ onBeforeUnmount(() => {
 .layers-action { background: #1a2741; padding-left: 10px; }
 .report-action { background: #c93636; }
 .map-action:hover { filter: brightness(1.1); }
+.metrics-jump {
+  position: absolute;
+  z-index: 31;
+  bottom: 16px;
+  left: 50%;
+  display: flex;
+  height: 38px;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: #1a2741;
+  padding: 0 15px 0 17px;
+  color: #fff;
+  box-shadow: 0 5px 18px rgba(13,25,49,.28);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .015em;
+  cursor: pointer;
+  transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.metrics-jump:hover { transform: translateX(-50%) translateY(-2px); background: #233454; box-shadow: 0 8px 22px rgba(13,25,49,.34); }
+.metrics-jump:active { transform: translateX(-50%) translateY(0); }
+.metrics-jump svg { color: #71bce7; }
 </style>
