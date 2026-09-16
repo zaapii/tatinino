@@ -33,7 +33,7 @@ const baseMapOptions = computed(() => [
             <button role="switch" :aria-label="`${layer.enabled ? 'Ocultar' : 'Mostrar'} ${layer.label}`" :aria-checked="layer.enabled" :disabled="layer.status === 'soon'" class="layer-switch" @click="emit('toggle', layer.id)"><span /></button>
             <span v-if="layer.id !== 'water'" class="layer-preview" :class="layer.id" aria-hidden="true">
               <img v-if="layer.id === 'citizen-reports'" src="/figma/reports.svg" width="28" height="28" alt="" />
-              <img v-else-if="layer.id === 'river-levels'" src="/figma/river.svg" width="24" height="24" alt="" />
+              <img v-else-if="layer.id === 'river-levels'" src="/figma/river-level-marker.svg" width="25" height="25" alt="" />
             </span>
             <span class="layer-label">{{ layer.label }} <span v-if="layer.id === 'citizen-reports'" class="report-count">{{ props.reportCount ?? 0 }}</span></span>
             <button v-if="layer.id === 'citizen-reports'" class="layer-info" :aria-expanded="reportsExpanded" aria-label="Categorías de reclamos" @click="reportsExpanded = !reportsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !reportsExpanded }" /></button>
@@ -76,7 +76,7 @@ const baseMapOptions = computed(() => [
 .layer-preview.pumping::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #dda52d; }
 .layer-preview.basins { height: 16px; border: 1.5px dashed #4b6d89; }
 .layer-preview.sub-basins { height: 16px; border: .7px dashed #4b6d89; }
-.layer-preview.river-levels { background: #4ba6de; border-radius: 4px; }
+.layer-preview.river-levels img { width: 25px; height: 25px; }
 .report-categories { padding: 0 8px 14px 58px; }
 .report-categories label { display: flex; align-items: center; gap: 6px; min-height: 31px; font-size: 12px; line-height: 16px; cursor: pointer; }
 .report-categories input { width: 12px; height: 12px; flex-shrink: 0; accent-color: #1a2741; }

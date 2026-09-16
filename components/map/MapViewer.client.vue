@@ -844,6 +844,8 @@ function addCitizenReportLayers() {
         'circle-color': reportSeverityColorExpression,
         'circle-opacity': 0.42,
         'circle-blur': 0.3,
+        'circle-translate': [0, -19],
+        'circle-translate-anchor': 'viewport',
       },
     })
   }

@@ -22,11 +22,14 @@ let riverObserver: IntersectionObserver | undefined
 let reduceMotion = false
 const riverElements = new Map<string, HTMLElement>()
 
-const reportBreakdown = computed(() => citizenReportCategories.map(category => ({
-  ...category,
-  icon: reportDesignIcons[category.topic],
-  count: props.reports.filter(report => report.topic === category.topic).length,
-})))
+const reportBreakdown = computed(() => citizenReportCategories
+  .map((category, index) => ({
+    ...category,
+    index,
+    icon: reportDesignIcons[category.topic],
+    count: props.reports.filter(report => report.topic === category.topic).length,
+  }))
+  .sort((a, b) => b.count - a.count || a.index - b.index))
 
 const orderedRivers = computed(() => {
   const order = ['salado-santo-tome', 'colastine-rn-168', 'santa-fe', 'parana', 'salado-recreo']
