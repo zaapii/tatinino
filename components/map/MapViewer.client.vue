@@ -428,6 +428,11 @@ const styleIdsFor = (id: string): [string, string, string, string] => [
   `hydraulic-${id}-point`,
   `hydraulic-${id}-label`,
 ]
+const hitStyleIdsFor = (id: string): [string, string] => [
+  `hydraulic-${id}-line-hit`,
+  `hydraulic-${id}-point-hit`,
+]
+const allStyleIdsFor = (id: string) => [...styleIdsFor(id), ...hitStyleIdsFor(id)]
 
 function updateLoadingState() {
   emit('loadingChange', loadingSources.size)
@@ -593,6 +598,34 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
         'text-color': '#62263f',
         'text-halo-color': 'rgba(255, 255, 255, 0.96)',
         'text-halo-width': 1.5,
+      },
+    })
+  }
+
+  if (!map.getLayer(hitStyleIdsFor(definition.id)[0])) {
+    map.addLayer({
+      ...shared,
+      id: hitStyleIdsFor(definition.id)[0],
+      type: 'line',
+      filter: lineGeometryFilter,
+      paint: {
+        'line-color': '#000000',
+        'line-opacity': 0.001,
+        'line-width': ['interpolate', ['linear'], ['zoom'], source.minZoom, 16, 17, 24],
+      },
+    })
+  }
+
+  if (definition.id !== 'sub-basins' && !map.getLayer(hitStyleIdsFor(definition.id)[1])) {
+    map.addLayer({
+      ...shared,
+      id: hitStyleIdsFor(definition.id)[1],
+      type: 'circle',
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: {
+        'circle-color': '#000000',
+        'circle-opacity': 0.001,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], source.minZoom, 11, 17, 16],
       },
     })
   }
@@ -907,7 +940,7 @@ function updateHydraulicLayerVisibility(layerId: string) {
   const definition = props.layers.find(layer => layer.id === layerId)
   if (!definition) return
 
-  for (const styleId of styleIdsFor(layerId)) {
+  for (const styleId of allStyleIdsFor(layerId)) {
     if (map.getLayer(styleId)) map.setLayoutProperty(styleId, 'visibility', definition.enabled ? 'visible' : 'none')
   }
 }
@@ -928,7 +961,7 @@ function syncHydraulicLayers() {
     if (!definition.source) continue
     if (definition.enabled) addHydraulicLayer(definition)
 
-    for (const styleId of styleIdsFor(definition.id)) {
+    for (const styleId of allStyleIdsFor(definition.id)) {
       if (map.getLayer(styleId)) map.setLayoutProperty(styleId, 'visibility', definition.enabled ? 'visible' : 'none')
     }
   }
@@ -940,10 +973,16 @@ function syncHydraulicLayers() {
 
 function renderedSelectableLayerIds() {
   if (!map) return []
-  const hydraulic = props.layers.flatMap(layer => styleIdsFor(layer.id)).filter(id => map?.getLayer(id))
+  const hydraulic = props.layers
+    .filter(layer => layer.enabled && layer.source)
+    .flatMap(layer => [...hitStyleIdsFor(layer.id), ...styleIdsFor(layer.id)])
+    .filter(id => map?.getLayer(id))
   const specialLayers: string[] = []
   if (map.getLayer(reportPointLayerId) && props.reportsVisible) specialLayers.push(reportPointLayerId)
-  if (map.getLayer(riverLevelPointLayerId) && props.riverLevelsVisible) specialLayers.push(riverLevelPointLayerId, riverLevelReferenceLayerId)
+  if (props.riverLevelsVisible) {
+    if (map.getLayer(riverLevelPointLayerId)) specialLayers.push(riverLevelPointLayerId)
+    if (map.getLayer(riverLevelReferenceLayerId)) specialLayers.push(riverLevelReferenceLayerId)
+  }
   return [...specialLayers, ...hydraulic]
 }
 
@@ -961,15 +1000,24 @@ function reportNear(point: { x: number; y: number }) {
     .sort((a, b) => a.distance - b.distance)[0]?.report
 }
 
-function selectableFeaturesNear(point: { x: number; y: number }, tolerance: number) {
+function selectableFeaturesAt(point: { x: number; y: number }) {
   if (!map || !styleReady) return []
   const layers = renderedSelectableLayerIds()
   if (!layers.length) return []
-  const bounds: [[number, number], [number, number]] = [
-    [point.x - tolerance, point.y - tolerance],
-    [point.x + tolerance, point.y + tolerance],
-  ]
-  return map.queryRenderedFeatures(bounds, { layers })
+  return map.queryRenderedFeatures(point, { layers })
+}
+
+function preferredSelectableFeature(point: { x: number; y: number }) {
+  const features = selectableFeaturesAt(point)
+  const hydraulic = features.find(feature => feature.source.startsWith('hydraulic-'))
+  if (hydraulic) return hydraulic
+
+  const special = features.find(feature =>
+    feature.source === reportSourceId
+    || feature.source === riverLevelSourceId
+    || feature.layer.id === riverLevelReferenceLayerId,
+  )
+  return special ?? features[0]
 }
 
 function featureInfo(feature: MapGeoJSONFeature) {
@@ -1043,7 +1091,7 @@ watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:
 watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}:${reading.alertLevel}:${reading.evacuationLevel}`).join('|'), updateRiverLevelData)
 watch(() => props.reportLocation ? `${props.reportLocation.longitude}:${props.reportLocation.latitude}` : '', updateDraftData)
 watch(() => props.placingReport, placing => {
-  if (map) map.getCanvas().style.cursor = placing ? 'crosshair' : ''
+  if (map) map.getCanvasContainer().style.cursor = placing ? 'crosshair' : ''
 })
 watch(
   () => props.layers.map(layer => `${layer.id}:${layer.enabled}`).join('|'),
@@ -1117,9 +1165,9 @@ onMounted(async () => {
   })
 
   map.on('mousemove', event => {
-    map!.getCanvas().style.cursor = props.placingReport
+    map!.getCanvasContainer().style.cursor = props.placingReport
       ? 'crosshair'
-      : reportNear(event.point) || selectableFeaturesNear(event.point, 4).length ? 'pointer' : ''
+      : reportNear(event.point) || preferredSelectableFeature(event.point) ? 'pointer' : ''
   })
 
   map.on('moveend', scheduleImageryDate)
@@ -1131,30 +1179,31 @@ onMounted(async () => {
       return
     }
 
-    const report = reportNear(event.point)
-    if (report) {
+    const feature = preferredSelectableFeature(event.point)
+    if (feature) {
+      const featureCoordinates = feature.geometry.type === 'Point'
+        ? feature.geometry.coordinates
+        : null
       emit('pointSelected', {
-        ...report.point,
-        feature: {
-          layerId: reportSourceId,
-          layerLabel: report.topic,
-          color: reportMarkerColor(report.topic),
-          geometryType: 'Point',
-          sourceFile: 'Registro público de reclamos ciudadanos',
-          properties: reportGeoJson().features.find(feature => feature.properties.id === report.id)!.properties,
-        },
+        longitude: featureCoordinates?.[0] ?? event.lngLat.lng,
+        latitude: featureCoordinates?.[1] ?? event.lngLat.lat,
+        feature: featureInfo(feature),
       })
       return
     }
-    const feature = selectableFeaturesNear(event.point, 7)[0]
-    if (!feature) return
-    const featureCoordinates = feature?.geometry.type === 'Point'
-      ? feature.geometry.coordinates
-      : null
+
+    const report = reportNear(event.point)
+    if (!report) return
     emit('pointSelected', {
-      longitude: featureCoordinates?.[0] ?? event.lngLat.lng,
-      latitude: featureCoordinates?.[1] ?? event.lngLat.lat,
-      feature: feature ? featureInfo(feature) : undefined,
+      ...report.point,
+      feature: {
+        layerId: reportSourceId,
+        layerLabel: report.topic,
+        color: reportMarkerColor(report.topic),
+        geometryType: 'Point',
+        sourceFile: 'Registro público de reclamos ciudadanos',
+        properties: reportGeoJson().features.find(feature => feature.properties.id === report.id)!.properties,
+      },
     })
   })
 

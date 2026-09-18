@@ -34,6 +34,9 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Información pública para comprender el riesgo hídrico, anticipar escenarios y fortalecer la prevención en Santa Fe Capital.' },
         { name: 'theme-color', content: '#092235' },
       ],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      ],
     },
   },
   nitro: { preset: 'static' },

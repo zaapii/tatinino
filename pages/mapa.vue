@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-  <section class="relative h-dvh overflow-hidden bg-[#dfe9e8]" aria-label="Mapa interactivo">
+  <section class="relative h-dvh overflow-hidden bg-[#dfe9e8] lg:h-[915px]" aria-label="Mapa interactivo">
     <ClientOnly>
       <MapViewerClient
         :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"

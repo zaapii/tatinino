@@ -196,7 +196,7 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 
 <style scoped>
 .impact-section { position: relative; z-index: 50; min-height: 100vh; background: #1a2741; color: #fff; padding: 82px 24px 50px; }
-.impact-content { width: min(650px, 100%); margin: 0 auto; }
+.impact-content { width: min(608px, 100%); margin: 0 auto; }
 .impact-block + .impact-block { margin-top: 76px; }
 .impact-title { font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(34px, 3.2vw, 48px); line-height: .96; font-weight: 400; letter-spacing: -.025em; text-transform: uppercase; }
 .impact-intro { margin-top: 9px; color: rgba(255,255,255,.53); font-size: 14px; line-height: 1.45; font-weight: 600; }
