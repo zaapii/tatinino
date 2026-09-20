@@ -31,7 +31,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'es-AR' },
       titleTemplate: '%s - Tati Restagno',
       meta: [
-        { name: 'description', content: 'Mapa de prevención y gestión hídrica de Santa Fe. Consultá el riesgo hídrico y los problemas de tu barrio.' },
+        { name: 'description', content: 'Mapa del Agua de Santa Fe: consultá niveles de los ríos, capas de riesgo hídrico y reclamos vecinales.' },
         { name: 'theme-color', content: '#092235' },
         { name: 'robots', content: 'index,follow,max-image-preview:large' },
         { property: 'og:type', content: 'website' },

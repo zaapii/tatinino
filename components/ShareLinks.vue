@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Facebook, MessageCircle } from 'lucide-vue-next'
 
-const url = 'https://tatirestagno.com/mapa'
+const url = 'https://tatirestagno.com/mapa/'
 const message = 'Entrá al Mapa del Agua para consultar la situación hídrica de Santa Fe y denunciar los problemas en tu barrio.'
 const links = [
   { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, icon: Facebook },

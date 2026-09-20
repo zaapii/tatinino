@@ -7,11 +7,11 @@ import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
 useSeoMeta({
   title: 'Mapa del Agua',
-  description: 'Mapa de prevención y gestión hídrica de Santa Fe. Consultá el riesgo hídrico, los niveles de los ríos y los reclamos de tu barrio.',
+  description: 'Mapa del Agua de Santa Fe: consultá niveles de los ríos, capas de riesgo hídrico y reclamos vecinales en un mapa interactivo.',
   ogTitle: 'Mapa del Agua',
-  ogDescription: 'Mapa de prevención y gestión hídrica de Santa Fe',
+  ogDescription: 'Mapa del Agua de Santa Fe: niveles de los ríos, riesgo hídrico y reclamos vecinales.',
   twitterTitle: 'Mapa del Agua - Tati Restagno',
-  twitterDescription: 'Mapa de prevención y gestión hídrica de Santa Fe',
+  twitterDescription: 'Mapa del Agua de Santa Fe: niveles de los ríos, riesgo hídrico y reclamos vecinales.',
 })
 
 const { layers, toggleLayer } = useMapLayers()

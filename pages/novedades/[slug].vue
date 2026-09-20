@@ -45,7 +45,7 @@ useHead({
       datePublished: article.value.publishedOn,
       dateModified: article.value.updatedAt,
       inLanguage: 'es-AR',
-      mainEntityOfPage: `https://tatirestagno.com/novedades/${encodeURIComponent(article.value.slug)}`,
+      mainEntityOfPage: `https://tatirestagno.com/novedades/${encodeURIComponent(article.value.slug)}/`,
       image: 'https://tatirestagno.com/portada-mapa-del-agua.png',
     }).replace(/</g, '\\u003c')),
   }],
