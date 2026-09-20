@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Facebook, Instagram, LoaderCircle, MessageCircle, RefreshCw, Share2 } from 'lucide-vue-next'
+import { LoaderCircle, RefreshCw } from 'lucide-vue-next'
 import { citizenReportCategories } from '~/utils/citizenReportCategories'
 import { reportDesignIcons } from '~/utils/reportDesign'
 import type { CitizenReport, RiverLevelReading } from '~/types/map'
@@ -53,8 +53,19 @@ function formatLevel(value: number | null) {
 }
 
 function riverStyle(reading: RiverLevelReading, index: number) {
-  const level = reading.level === null ? 0 : Math.min(95, Math.max(3, reading.level * 10))
-  return { '--level': `${level}%`, '--delay': `${index * 140}ms` }
+  const maximum = Math.max(1, reading.level ?? 0, reading.alertLevel ?? 0, reading.evacuationLevel ?? 0) * 1.2
+  const position = (value: number | null) => `${Math.max(0, Math.min(100, (value ?? 0) / maximum * 100))}%`
+  return {
+    '--level': position(reading.level),
+    '--alert-position': position(reading.alertLevel),
+    '--evacuation-position': position(reading.evacuationLevel),
+    '--delay': `${index * 140}ms`,
+  }
+}
+
+function thresholdLabel(reading: RiverLevelReading, value: number | null) {
+  if (!reading.thresholdsLoaded) return 'dato no disponible'
+  return value === null ? 'sin umbral publicado' : `${formatLevel(value)} m`
 }
 
 function registerRiverRow(element: unknown, id: string) {
@@ -143,7 +154,12 @@ onBeforeUnmount(() => riverObserver?.disconnect())
       <section class="impact-block infrastructure-block">
         <h2 class="impact-title">Obras de infraestructura</h2>
         <p class="impact-intro">Estado de las obras que afectan directamente al riesgo hídrico.</p>
-        <p class="project-status"><strong>Terraplén Garello</strong> (Colastiné Sur) <span>Inconclusa</span></p>
+        <article id="obra-garello" class="garello-card" aria-labelledby="garello-title">
+          <div class="garello-card-top"><span>Obra de protección hídrica</span><strong>Obra paralizada</strong></div>
+          <h3 id="garello-title">Terraplén Garello</h3>
+          <p class="garello-location">Colastiné Sur · Santa Fe</p>
+          <p class="garello-description">La obra del terraplén se encuentra paralizada. Su estado es relevante para la protección hídrica del sector.</p>
+        </article>
       </section>
 
       <section class="impact-block rivers-block">
@@ -156,14 +172,14 @@ onBeforeUnmount(() => riverObserver?.disconnect())
           <article v-for="(reading, index) in orderedRivers" :key="reading.id" :ref="element => registerRiverRow(element, reading.id)" class="river-row">
             <div class="river-heading">
               <h3>{{ riverLabel(reading) }}</h3>
-              <strong>{{ formatLevel(reading.level) }} m</strong>
+              <strong>{{ reading.level === null ? 'Sin dato' : `${formatLevel(reading.level)} m` }}</strong>
             </div>
             <div class="river-track" :class="{ animated: visibleRiverIds.has(reading.id) && reading.level !== null }" :style="riverStyle(reading, index)">
-              <div class="river-progress"><i /></div>
-              <i class="reference alert" />
-              <i class="reference evacuation" />
+              <div v-if="reading.level !== null" class="river-progress"><i /></div>
+              <i v-if="reading.alertLevel !== null" class="reference alert" />
+              <i v-if="reading.evacuationLevel !== null" class="reference evacuation" />
             </div>
-            <div class="river-labels"><span>0 m</span><span>Alerta - 4,70 m</span><span>Evacuación - 5 m</span></div>
+            <div class="river-labels"><span>0 m</span><span>Alerta: {{ thresholdLabel(reading, reading.alertLevel) }}</span><span>Evacuación: {{ thresholdLabel(reading, reading.evacuationLevel) }}</span></div>
           </article>
         </div>
       </section>
@@ -187,15 +203,14 @@ onBeforeUnmount(() => riverObserver?.disconnect())
       </section>
 
       <footer class="impact-footer">
-        <div class="share-label"><strong>Compartí el mapa en tus redes</strong><span aria-hidden="true"><Facebook :size="15"/><Instagram :size="15"/><Share2 :size="15"/><MessageCircle :size="15"/></span></div>
-        <button>Política de datos</button>
+        <ShareLinks />
       </footer>
     </div>
   </section>
 </template>
 
 <style scoped>
-.impact-section { position: relative; z-index: 50; min-height: 100vh; background: #1a2741; color: #fff; padding: 82px 24px 50px; }
+.impact-section { position: relative; z-index: 1; min-height: 100vh; background: #1a2741; color: #fff; padding: 82px 24px 50px; }
 .impact-content { width: min(608px, 100%); margin: 0 auto; }
 .impact-block + .impact-block { margin-top: 76px; }
 .impact-title { font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(34px, 3.2vw, 48px); line-height: .96; font-weight: 400; letter-spacing: -.025em; text-transform: uppercase; }
@@ -209,22 +224,25 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .report-row { display: grid; grid-template-columns: 24px 1fr 38px; align-items: center; min-height: 34px; gap: 8px; font-size: 11px; color: rgba(255,255,255,.83); }
 .report-row img { width: 20px; height: 20px; object-fit: contain; }
 .report-row b { justify-self: end; font-weight: 500; color: #fff; }
-.project-status { margin-top: 38px; font-size: 12px; color: rgba(255,255,255,.76); }
-.project-status strong { color: #fff; }
-.project-status span { margin-left: 7px; background: #f4d25b; color: #1a2741; padding: 5px 7px 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.garello-card { scroll-margin-top: 24px; margin-top: 30px; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; background: #273754; padding: 20px 24px 22px; box-shadow: 0 8px 24px #0c183e4d; }
+.garello-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; font-size: 10px; color: #a7cae6; text-transform: uppercase; letter-spacing: .05em; }
+.garello-card-top strong { border-radius: 99px; background: #c93636; padding: 6px 9px; color: white; font-size: 10px; }
+.garello-card h3 { margin-top: 18px; font-size: 24px; font-weight: 700; }
+.garello-location { margin-top: 3px; color: #c9d2e2; font-size: 12px; }
+.garello-description { max-width: 47ch; margin-top: 16px; font-size: 13px; line-height: 1.55; color: #d9e2ed; }
 .data-note { margin-top: 10px; color: rgba(255,255,255,.36); font-size: 10px; }
 .river-list { margin-top: 31px; }
 .river-row { padding: 23px 0 28px; border-top: 1px solid rgba(255,255,255,.12); }
 .river-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
 .river-heading h3 { font-size: 12px; font-weight: 700; }
 .river-heading strong { font-size: 23px; letter-spacing: -.025em; }
-.river-track { --level: 0%; --delay: 0ms; position: relative; height: 8px; margin-top: 24px; border-radius: 999px; background: linear-gradient(90deg, #4c5875, #4c5875 49%, #5d5a5b 50%, #4c5875 78%, #5b515b 100%); }
+.river-track { --level: 0%; --alert-position: 0%; --evacuation-position: 0%; --delay: 0ms; position: relative; height: 8px; margin-top: 24px; border-radius: 999px; background: #4c5875; }
 .river-progress { position: absolute; z-index: 2; left: 0; top: 0; width: 0; height: 8px; border-radius: inherit; background: #52617e; }
 .river-progress i { position: absolute; right: -5px; top: -2px; width: 12px; height: 12px; border-radius: 50%; background: #63b5e7; box-shadow: 0 0 11px rgba(99,181,231,.42); }
 .river-track.animated .river-progress { animation: river-rise 1.2s cubic-bezier(.22,.72,.2,1) var(--delay) forwards; }
 .reference { position: absolute; z-index: 1; top: -2px; width: 12px; height: 12px; border-radius: 50%; filter: blur(1px); opacity: .58; }
-.reference.alert { left: 50%; background: #c7aa61; box-shadow: 0 0 13px #c7aa61; }
-.reference.evacuation { right: 0; background: #b07a84; box-shadow: 0 0 13px #b07a84; }
+.reference.alert { left: var(--alert-position); background: #eebf48; box-shadow: 0 0 13px #eebf48; }
+.reference.evacuation { left: var(--evacuation-position); background: #ee3d48; box-shadow: 0 0 13px #ee3d48; }
 .river-labels { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 13px; font-size: 9px; color: rgba(255,255,255,.78); }
 .river-labels span:nth-child(2) { text-align: center; }
 .river-labels span:last-child { text-align: right; }
@@ -244,11 +262,7 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .weather-error { display: flex; align-items: center; gap: 12px; margin-top: 20px; color: rgba(255,255,255,.65); font-size: 12px; }
 .weather-error button { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 7px 10px; cursor: pointer; }
 .impact-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 90px; border-top: 1px solid rgba(255,255,255,.18); padding: 35px 0 0; }
-.share-label { display: flex; align-items: center; gap: 16px; font-size: 12px; }
-.share-label > span { display: flex; gap: 13px; color: #62b7eb; }
-.impact-footer button { color: rgba(255,255,255,.82); font-size: 10px; cursor: pointer; }
 @keyframes river-rise { to { width: var(--level); } }
-@media (min-width: 1024px) { .impact-section { width: calc(100% + 154px); margin-left: -154px; } }
 @media (max-width: 700px) {
   .impact-section { padding: 64px 22px 38px; }
   .impact-block + .impact-block { margin-top: 64px; }
@@ -258,6 +272,10 @@ onBeforeUnmount(() => riverObserver?.disconnect())
   .report-list { width: calc(100% - 24px); }
   .report-row { grid-template-columns: 23px 1fr 32px; font-size: 10px; }
   .river-heading strong { font-size: 20px; }
+  .river-labels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; font-size: 10px; }
+  .river-labels span { min-width: 0; overflow-wrap: anywhere; }
+  .river-labels span:first-child { grid-column: 1 / -1; }
+  .river-labels span:nth-child(2) { text-align: left; }
   .forecast-strip { grid-template-columns: repeat(3, 1fr); }
   .forecast-day:nth-child(3) { border-right: 0; }
   .forecast-day:nth-child(-n+3) { border-bottom: 1px solid #d7dce5; }

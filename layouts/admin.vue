@@ -2,6 +2,7 @@
 import { ArrowLeft, ChartNoAxesCombined, ExternalLink, ListChecks, LogOut, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck, Waves } from 'lucide-vue-next'
 
 const route = useRoute()
+useSeoMeta({ robots: 'noindex,nofollow' })
 const email = ref('')
 const signingOut = ref(false)
 const sidebarCollapsed = ref(false)

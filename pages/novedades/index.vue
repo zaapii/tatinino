@@ -2,8 +2,12 @@
 import { ArrowDown, CircleCheck, DatabaseZap, Rss } from 'lucide-vue-next'
 
 useSeoMeta({
-  title: 'Novedades',
+  title: 'Novedades sobre riesgo hídrico en Santa Fe',
   description: 'Notas, guías y explicaciones sobre información hídrica, territorio y prevención en Santa Fe.',
+  ogTitle: 'Novedades | Mapa del Agua',
+  ogDescription: 'Notas, guías y explicaciones sobre información hídrica, territorio y prevención en Santa Fe.',
+  twitterTitle: 'Novedades | Mapa del Agua',
+  twitterDescription: 'Notas, guías y explicaciones sobre información hídrica, territorio y prevención en Santa Fe.',
 })
 
 const { fetchArticles } = useArticles()

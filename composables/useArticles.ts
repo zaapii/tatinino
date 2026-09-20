@@ -64,6 +64,7 @@ function mapArticle(row: ArticleRow): Article {
     excerpt: row.excerpt,
     category: row.category,
     publishedAt: formatPublicationDate(row.published_at),
+    publishedOn: row.published_at,
     readingTime: `${row.reading_minutes} min de lectura`,
     visual: row.visual,
     kicker: row.kicker,

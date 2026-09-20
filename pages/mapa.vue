@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { reportDesignOrder } from '~/utils/reportDesign'
 import { ArrowDown, CircleAlert, Cloud, Crosshair, LoaderCircle, Radio, Waves, X } from 'lucide-vue-next'
-import type { BaseMapKind, CitizenReport, MapPoint, MapSelection, RiverLevelReading, SatelliteScene } from '~/types/map'
+import type { BaseMapKind, CitizenReport, MapPoint, MapSelection, RiverLevelReading } from '~/types/map'
 import MapViewerClient from '~/components/map/MapViewer.client.vue'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
 
 useSeoMeta({
-  title: 'Mapa de riesgo hídrico',
-  description: 'Mapa interactivo para comprender riesgos, anticipar escenarios y fortalecer la prevención en Santa Fe Capital.',
+  title: 'Mapa del Agua',
+  description: 'Mapa de prevención y gestión hídrica de Santa Fe. Consultá el riesgo hídrico, los niveles de los ríos y los reclamos de tu barrio.',
+  ogTitle: 'Mapa del Agua',
+  ogDescription: 'Mapa de prevención y gestión hídrica de Santa Fe',
+  twitterTitle: 'Mapa del Agua - Tati Restagno',
+  twitterDescription: 'Mapa de prevención y gestión hídrica de Santa Fe',
 })
 
 const { layers, toggleLayer } = useMapLayers()
 const selectedPoint = ref<MapSelection | null>(null)
 const layersOpen = ref(false)
 const baseMap = ref<BaseMapKind>('simple')
-const recentSatelliteScene = ref<SatelliteScene | null>(null)
 const reportOpen = ref(false)
 const infoOpen = ref(false)
 const mapReady = ref(false)
@@ -33,7 +36,6 @@ watch(reportTopics, () => { if (selectedPoint.value?.feature?.layerId === 'citiz
 const riverLevels = ref<RiverLevelReading[]>([])
 const { fetchReports, subscribeToReports } = useCitizenReports()
 const { fetchRiverLevels } = useRiverLevels()
-const { fetchLatestSatelliteScene } = useSatelliteImagery()
 let stopReportSubscription: (() => void) | undefined
 let reportRefreshTimer: ReturnType<typeof setInterval> | undefined
 let riverLevelRefreshTimer: ReturnType<typeof setInterval> | undefined
@@ -126,9 +128,6 @@ onMounted(() => {
     .catch(error => reportsError.value = error instanceof Error ? error.message : 'No se pudieron sincronizar los reclamos.')
     .finally(() => reportsLoading.value = false)
   void syncRiverLevels()
-  void fetchLatestSatelliteScene()
-    .then(scene => { recentSatelliteScene.value = scene })
-    .catch(() => undefined)
   window.addEventListener('focus', refreshReportsOnFocus)
   reportRefreshTimer = setInterval(() => void syncApprovedReports(true).catch(() => undefined), 30_000)
   riverLevelRefreshTimer = setInterval(() => void syncRiverLevels(true), 30 * 60_000)
@@ -150,7 +149,7 @@ onBeforeUnmount(() => {
         :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
         @selection-closed="selectedPoint = null"
         :base-map="baseMap"
-        :recent-satellite-scene="recentSatelliteScene"
+        :recent-satellite-scene="null"
         :water-visible="waterVisible"
         :layers="layers"
         :reports="filteredReports"
@@ -177,7 +176,12 @@ onBeforeUnmount(() => {
       <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
     </div>
 
-    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" :recent-imagery-available="Boolean(recentSatelliteScene)" @toggle="toggleLayer" />
+    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
+    <a v-if="!selectedPoint && !placingReport && !layersOpen && !reportOpen" href="#obra-garello" class="garello-map-card">
+      <span class="garello-map-status">Obra paralizada</span>
+      <strong>Terraplén Garello</strong>
+      <span>Colastiné Sur · Ver información ↓</span>
+    </a>
     <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 
@@ -216,6 +220,7 @@ onBeforeUnmount(() => {
     :river-levels="riverLevels"
     :river-levels-loading="riverLevelsLoading"
   />
+  <MapSeoContent />
   </div>
 </template>
 
@@ -224,6 +229,10 @@ onBeforeUnmount(() => {
 .layers-action { background: #1a2741; padding-left: 10px; }
 .report-action { background: #c93636; }
 .map-action:hover { filter: brightness(1.1); }
+.garello-map-card { position: absolute; z-index: 30; top: 20px; right: 20px; display: grid; gap: 4px; width: 205px; border-radius: 10px; background: #fff; padding: 12px 14px; color: #1a2741; box-shadow: 0 7px 24px #09223530; font-size: 11px; }
+.garello-map-card strong { font-size: 14px; }
+.garello-map-status { color: #ad2929; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.garello-map-card:hover { box-shadow: 0 10px 28px #09223545; }
 .metrics-jump {
   position: absolute;
   z-index: 31;
@@ -249,4 +258,5 @@ onBeforeUnmount(() => {
 .metrics-jump:hover { transform: translateX(-50%) translateY(-2px); background: #233454; box-shadow: 0 8px 22px rgba(13,25,49,.34); }
 .metrics-jump:active { transform: translateX(-50%) translateY(0); }
 .metrics-jump svg { color: #71bce7; }
+@media (max-width: 639px) { .garello-map-card { top: 126px; right: 12px; width: 178px; padding: 10px 12px; } }
 </style>

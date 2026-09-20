@@ -10,13 +10,24 @@ type InaObservationResponse = {
   data?: InaObservation[]
 }
 
+type InaStationMetadata = {
+  nivel_de_alerta: number | string | null
+  nivel_de_evacuacion: number | string | null
+  nivel_de_aguas_bajas: number | string | null
+}
+
+type InaStationResponse = {
+  data?: InaStationMetadata[]
+}
+
 type RiverStationDefinition = Omit<
   RiverLevelReading,
-  'level' | 'previousLevel' | 'observedAt' | 'updatedAt' | 'status' | 'trend' | 'isStale' | 'dataUrl' | 'error'
->
+  'level' | 'previousLevel' | 'observedAt' | 'updatedAt' | 'status' | 'trend' | 'isStale' | 'dataUrl' | 'error' | 'lowWaterLevel' | 'alertLevel' | 'evacuationLevel' | 'thresholdsLoaded'
+> & { siteCode: number }
 
 const INA_DATA_BASE_URL = 'https://alerta.ina.gob.ar/pub/datos/datos'
-const CACHE_KEY = 'santa-fe-river-levels-v3'
+const INA_STATIONS_BASE_URL = 'https://alerta.ina.gob.ar/pub/datos/estaciones'
+const CACHE_KEY = 'santa-fe-river-levels-v4'
 const CACHE_DURATION_MS = 30 * 60 * 1000
 const STALE_AFTER_MS = 72 * 60 * 60 * 1000
 const LOOKBACK_DAYS = 45
@@ -28,10 +39,8 @@ const stations: RiverStationDefinition[] = [
     stationName: 'Paraná · Túnel Subfluvial',
     mapLabel: 'Túnel',
     seriesId: 29,
+    siteCode: 29,
     point: { latitude: -31.7182378629681, longitude: -60.5225697750899 },
-    lowWaterLevel: 1.61,
-    alertLevel: 4.7,
-    evacuationLevel: 5,
     sourceName: 'INA · Prefectura Naval Argentina',
   },
   {
@@ -40,10 +49,8 @@ const stations: RiverStationDefinition[] = [
     stationName: 'Puerto Santa Fe · Dique II',
     mapLabel: 'Puerto',
     seriesId: 30,
+    siteCode: 30,
     point: { latitude: -31.6514772196376, longitude: -60.7002319185745 },
-    lowWaterLevel: 2,
-    alertLevel: 5.3,
-    evacuationLevel: 5.7,
     sourceName: 'INA · Prefectura Naval Argentina',
   },
   {
@@ -52,10 +59,8 @@ const stations: RiverStationDefinition[] = [
     stationName: 'Santo Tomé',
     mapLabel: 'Santo Tomé',
     seriesId: 3044,
+    siteCode: 1679,
     point: { latitude: -31.667601, longitude: -60.752233 },
-    lowWaterLevel: null,
-    alertLevel: 4.7,
-    evacuationLevel: null,
     sourceName: 'INA · Red Hidrológica Nacional · FICH',
   },
   {
@@ -64,10 +69,8 @@ const stations: RiverStationDefinition[] = [
     stationName: 'Recreo · RP 70',
     mapLabel: 'Recreo',
     seriesId: 103,
+    siteCode: 103,
     point: { latitude: -31.4912222222222, longitude: -60.7805555555556 },
-    lowWaterLevel: null,
-    alertLevel: 4.7,
-    evacuationLevel: null,
     sourceName: 'INA · Red Hidrológica Nacional',
   },
   {
@@ -76,10 +79,8 @@ const stations: RiverStationDefinition[] = [
     stationName: 'Colastiné · RN 168',
     mapLabel: 'RN 168',
     seriesId: 8313,
+    siteCode: 2673,
     point: { latitude: -31.6611111111111, longitude: -60.6019444444444 },
-    lowWaterLevel: null,
-    alertLevel: null,
-    evacuationLevel: null,
     sourceName: 'INA · Red Hidrológica Nacional (SAT)',
   },
 ]
@@ -92,7 +93,7 @@ function normalizedTimestamp(value: string) {
   return /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) ? value : `${value}-03:00`
 }
 
-function statusFor(level: number | null, station: RiverStationDefinition): RiverLevelStatus {
+function statusFor(level: number | null, station: Pick<RiverLevelReading, 'lowWaterLevel' | 'alertLevel' | 'evacuationLevel'>): RiverLevelStatus {
   if (level === null) return 'unknown'
   if (station.evacuationLevel !== null && level >= station.evacuationLevel) return 'evacuation'
   if (station.alertLevel !== null && level >= station.alertLevel) return 'alert'
@@ -111,6 +112,10 @@ function trendFor(level: number | null, previousLevel: number | null): RiverLeve
 function unavailableReading(station: RiverStationDefinition, dataUrl: string, error: unknown): RiverLevelReading {
   return {
     ...station,
+    lowWaterLevel: null,
+    alertLevel: null,
+    evacuationLevel: null,
+    thresholdsLoaded: false,
     level: null,
     previousLevel: null,
     observedAt: null,
@@ -123,13 +128,38 @@ function unavailableReading(station: RiverStationDefinition, dataUrl: string, er
   }
 }
 
+function levelFromMetadata(value: number | string | null): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const level = Number(value)
+  return Number.isFinite(level) ? level : null
+}
+
 export function useRiverLevels() {
   async function fetchStation(station: RiverStationDefinition, start: string, end: string): Promise<RiverLevelReading> {
     const dataUrl = `${INA_DATA_BASE_URL}&timeStart=${start}&timeEnd=${end}&seriesId=${station.seriesId}&format=json`
+    const metadataUrl = `${INA_STATIONS_BASE_URL}&siteCode=${station.siteCode}&format=json`
 
     try {
-      const response = await fetch(dataUrl, { headers: { Accept: 'application/json' } })
+      const [response, metadataResponse] = await Promise.all([
+        fetch(dataUrl, { headers: { Accept: 'application/json' } }),
+        fetch(metadataUrl, { headers: { Accept: 'application/json' } }).catch(() => null),
+      ])
       if (!response.ok) throw new Error(`La estación respondió con código ${response.status}.`)
+
+      let metadata: InaStationMetadata | undefined
+      if (metadataResponse?.ok) {
+        try {
+          const payload = await metadataResponse.json() as InaStationResponse
+          metadata = payload.data?.[0]
+        }
+        catch { /* La lectura sigue disponible aunque fallen los metadatos. */ }
+      }
+      const thresholds = {
+        lowWaterLevel: levelFromMetadata(metadata?.nivel_de_aguas_bajas ?? null),
+        alertLevel: levelFromMetadata(metadata?.nivel_de_alerta ?? null),
+        evacuationLevel: levelFromMetadata(metadata?.nivel_de_evacuacion ?? null),
+        thresholdsLoaded: Boolean(metadata),
+      }
 
       const payload = await response.json() as InaObservationResponse
       const observations = (payload.data ?? [])
@@ -146,11 +176,12 @@ export function useRiverLevels() {
 
       return {
         ...station,
+        ...thresholds,
         level,
         previousLevel,
         observedAt,
         updatedAt,
-        status: statusFor(level, station),
+        status: statusFor(level, thresholds),
         trend: trendFor(level, previousLevel),
         isStale: Date.now() - new Date(observedAt).getTime() > STALE_AFTER_MS,
         dataUrl,

@@ -27,6 +27,28 @@ useSeoMeta({
   description: () => article.value?.excerpt ?? '',
   ogTitle: () => article.value?.title ?? 'Publicación',
   ogDescription: () => article.value?.excerpt ?? '',
+  twitterTitle: () => article.value?.title ?? 'Publicación',
+  twitterDescription: () => article.value?.excerpt ?? '',
+  ogType: 'article',
+  articlePublishedTime: () => article.value.publishedOn,
+  articleModifiedTime: () => article.value.updatedAt,
+})
+
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: computed(() => JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.value.title,
+      description: article.value.excerpt,
+      datePublished: article.value.publishedOn,
+      dateModified: article.value.updatedAt,
+      inLanguage: 'es-AR',
+      mainEntityOfPage: `https://tatirestagno.com/novedades/${encodeURIComponent(article.value.slug)}`,
+      image: 'https://tatirestagno.com/portada-mapa-del-agua.png',
+    }).replace(/</g, '\\u003c')),
+  }],
 })
 </script>
 
@@ -37,7 +59,7 @@ useSeoMeta({
         <NuxtLink to="/novedades" class="group inline-flex items-center gap-2 text-xs font-semibold text-ink/55 hover:text-river"><ArrowLeft :size="16" class="transition-transform group-hover:-translate-x-1"/> Volver a Novedades</NuxtLink>
         <div class="mt-12 grid gap-10 lg:grid-cols-[1.15fr_.85fr] lg:items-end lg:gap-20">
           <div>
-            <div class="flex flex-wrap items-center gap-3 ui-label text-[9px]"><span class="text-river">{{ article.category }}</span><span class="size-1 rounded-full bg-ink/20"/><span class="text-ink/40">{{ article.publishedAt }}</span></div>
+            <div class="flex flex-wrap items-center gap-3 ui-label text-[9px]"><span class="text-river">{{ article.category }}</span><span class="size-1 rounded-full bg-ink/20"/><time class="text-ink/40" :datetime="article.publishedOn">{{ article.publishedAt }}</time></div>
             <h1 class="mt-5 max-w-4xl text-[clamp(2.7rem,5.4vw,5.6rem)] font-semibold leading-[.92] tracking-[-.06em]">{{ article.title }}</h1>
           </div>
           <div class="border-l border-ink/12 pl-5 lg:mb-1">

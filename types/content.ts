@@ -16,6 +16,7 @@ export type Article = {
   excerpt: string
   category: ArticleCategory
   publishedAt: string
+  publishedOn: string
   readingTime: string
   visual: ArticleVisualVariant
   kicker: string

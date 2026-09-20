@@ -28,11 +28,22 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'es' },
-      titleTemplate: '%s · Santa Fe — Información Hídrica',
+      htmlAttrs: { lang: 'es-AR' },
+      titleTemplate: '%s - Tati Restagno',
       meta: [
-        { name: 'description', content: 'Información pública para comprender el riesgo hídrico, anticipar escenarios y fortalecer la prevención en Santa Fe Capital.' },
+        { name: 'description', content: 'Mapa de prevención y gestión hídrica de Santa Fe. Consultá el riesgo hídrico y los problemas de tu barrio.' },
         { name: 'theme-color', content: '#092235' },
+        { name: 'robots', content: 'index,follow,max-image-preview:large' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'Mapa del Agua - Tati Restagno' },
+        { property: 'og:locale', content: 'es_AR' },
+        { property: 'og:image', content: 'https://tatirestagno.com/portada-mapa-del-agua.png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:alt', content: 'Mapa del Agua de Santa Fe' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:image', content: 'https://tatirestagno.com/portada-mapa-del-agua.png' },
+        { name: 'twitter:image:alt', content: 'Mapa del Agua de Santa Fe' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

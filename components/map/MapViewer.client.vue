@@ -274,12 +274,14 @@ function riverReadingProperties(reading: RiverLevelReading) {
     observedAtLabel: reading.observedAt ? riverDateFormatter.format(new Date(reading.observedAt)) : 'Sin registro reciente',
     updatedAtLabel: reading.updatedAt ? riverDateTimeFormatter.format(new Date(reading.updatedAt)) : '',
     trendLabel: trendLabel(reading),
-    riverStatusLabel: reading.lowWaterLevel === null && reading.alertLevel === null && reading.evacuationLevel === null
-      ? 'Sin umbrales oficiales publicados'
-      : riverStatusLabels[reading.status],
+    riverStatusLabel: !reading.thresholdsLoaded
+      ? 'No se pudieron consultar los umbrales oficiales'
+      : reading.lowWaterLevel === null && reading.alertLevel === null && reading.evacuationLevel === null
+        ? 'Sin umbrales oficiales publicados'
+        : riverStatusLabels[reading.status],
     lowWaterLevelLabel: reading.lowWaterLevel === null ? '' : levelLabel(reading.lowWaterLevel),
     alertLevelLabel: reading.alertLevel === null ? '' : levelLabel(reading.alertLevel),
-    evacuationLevelLabel: reading.evacuationLevel === null ? 'Sin umbral oficial publicado' : levelLabel(reading.evacuationLevel),
+    evacuationLevelLabel: reading.evacuationLevel === null ? (reading.thresholdsLoaded ? 'Sin umbral oficial publicado' : 'Umbral no disponible') : levelLabel(reading.evacuationLevel),
     alertMapLabel: reading.alertLevel === null ? 'Alerta s/d' : `Alerta ${levelLabel(reading.alertLevel)}`,
     evacuationMapLabel: reading.evacuationLevel === null ? 'Evac. s/d' : `Evac. ${levelLabel(reading.evacuationLevel)}`,
     sourceName: reading.sourceName,

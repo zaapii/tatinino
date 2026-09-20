@@ -1,73 +1,85 @@
 <script setup lang="ts">
-import { Droplets, Sprout, Waves, Route, ArrowDown, BookOpen } from 'lucide-vue-next'
+import { ArrowUpRight } from 'lucide-vue-next'
 
 useSeoMeta({
-  title: 'El fenómeno de El Niño',
-  description: 'Información verificada para entender El Niño y su posible impacto en Santa Fe y el Litoral argentino.',
+  title: 'El Niño en Santa Fe',
+  description: 'Qué es el fenómeno de El Niño, cómo puede influir en las lluvias de Santa Fe y qué documentos oficiales regulan la emergencia hídrica.',
+  ogTitle: 'El Niño en Santa Fe | Mapa del Agua',
+  ogDescription: 'Qué es El Niño y qué documentos oficiales regulan la emergencia hídrica en Santa Fe.',
+  twitterTitle: 'El Niño en Santa Fe | Mapa del Agua',
+  twitterDescription: 'Qué es El Niño y qué documentos oficiales regulan la emergencia hídrica en Santa Fe.',
 })
 
-const indicators = [
-  { label: 'Precipitaciones', detail: 'Pendiente de fuente oficial', icon: Droplets },
-  { label: 'Humedad del suelo', detail: 'Datos en preparación', icon: Sprout },
-  { label: 'Niveles de ríos', detail: 'Pendiente de fuente oficial', icon: Waves },
-  { label: 'Posibles escenarios', detail: 'Próximamente', icon: Route },
+const documents = [
+  { title: 'Ley de emergencia hídrica niño N° 14.477', url: 'https://santafeciudad.gov.ar/wp-content/uploads/2026/08/Ley-de-emergencia-hidrica-nino-N%C2%B014477.pdf' },
+  { title: 'Decreto Municipal Emergencia Niño', url: 'https://santafeciudad.gov.ar/wp-content/uploads/2026/08/Decreto-Municipal-emergencia-nino.pdf' },
+  { title: 'Decreto N° 1708-2010', url: 'https://santafeciudad.gov.ar/wp-content/uploads/2026/08/DECRETO-1708-2010.pdf' },
+  { title: 'Decreto N° 1708-2010 (Anexo)', url: 'https://santafeciudad.gov.ar/wp-content/uploads/2026/08/Decreto-N%C2%B0-1708-2010-Anexo.pdf' },
+  { title: 'Ordenanza N° 11.512', url: 'https://santafeciudad.gov.ar/wp-content/uploads/2026/08/Ordenanza-N%C2%B0-11.512.pdf' },
 ]
 </script>
 
 <template>
-  <div class="bg-paper">
-    <header class="relative overflow-hidden border-b border-ink/10 px-6 pb-14 pt-12 sm:px-10 sm:pb-20 sm:pt-16 lg:px-14 lg:pb-24 lg:pt-20">
-      <div class="pointer-events-none absolute right-[-8rem] top-[-17rem] size-[38rem] rounded-full border border-river/10" />
-      <div class="pointer-events-none absolute right-[-4rem] top-[-12rem] size-[30rem] rounded-full border border-river/10" />
-      <div class="relative mx-auto max-w-6xl">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <p class="ui-label text-river">Clima · Explicado con evidencia</p>
-          <p class="ui-label flex items-center gap-2 text-ink/40"><span class="size-1.5 rounded-full bg-river"/> Datos abiertos · Fuentes verificables · Actualización permanente</p>
-        </div>
-        <div class="mt-16 grid items-end gap-10 lg:mt-24 lg:grid-cols-[1fr_.55fr]">
-          <div>
-            <h1 class="max-w-3xl text-[clamp(3.1rem,7vw,6.8rem)] font-semibold leading-[.86] tracking-[-.065em]">El fenómeno<br><span class="text-river">de El Niño</span></h1>
-            <p class="mt-8 max-w-2xl text-base leading-relaxed text-ink/62 sm:text-lg">Información verificada para entender su funcionamiento y su posible impacto en nuestra región.</p>
-          </div>
-          <a href="#entender" class="group hidden items-center justify-between border-b border-ink/25 pb-3 text-xs font-semibold lg:flex">Empezar por lo esencial <ArrowDown :size="17" class="transition-transform group-hover:translate-y-1"/></a>
-        </div>
+  <div class="nino-page">
+    <div class="nino-content">
+      <h1><span class="sr-only">¿Qué es el fenómeno de El Niño?</span><img src="/figma/el-nino/title.png" width="438" height="144" alt="" /></h1>
+
+      <div class="nino-copy">
+        <p>El Niño es un <strong>fenómeno climático natural</strong> que se produce cada algunos años y puede modificar los patrones habituales de lluvias y temperaturas en distintas regiones del mundo.</p>
+        <p>En nuestra zona, puede favorecer períodos con precipitaciones más frecuentes o más intensas de lo habitual, aunque eso no significa que vaya a llover de manera permanente, ni que necesariamente se produzcan situaciones de emergencia.</p>
+        <p class="nino-source">Fuente para comprender el fenómeno: <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ensofaq.shtml" target="_blank" rel="noopener noreferrer">Centro de Predicción Climática de NOAA</a>.</p>
       </div>
-    </header>
 
-    <div>
-      <section id="entender" class="px-6 py-16 sm:px-10 lg:px-14 lg:py-24">
-        <div class="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[.65fr_1.35fr] lg:gap-24">
-          <div><p class="ui-label text-river">Punto de partida</p><h2 class="waterline mt-3 text-3xl font-semibold tracking-[-.04em] sm:text-4xl">¿Qué es<br>El Niño?</h2></div>
-          <div class="max-w-3xl">
-            <p class="text-xl font-medium leading-relaxed tracking-[-.02em] text-ink/78 sm:text-2xl">Esta sección presentará una explicación científica clara, revisada y acompañada por sus fuentes.</p>
-            <div class="mt-8 flex gap-3 border-l-2 border-river/35 pl-5"><BookOpen :size="18" class="mt-0.5 shrink-0 text-river"/><p class="text-sm leading-relaxed text-ink/55">El contenido se incorporará después de validar la redacción con información de organismos especializados. No se publican afirmaciones provisorias como si fueran datos oficiales.</p></div>
-          </div>
+      <section class="nino-purpose" aria-labelledby="purpose-title">
+        <h2 id="purpose-title"><span class="sr-only">¿Por qué existe este mapa?</span><img src="/figma/el-nino/subtitle.png" width="298" height="40" alt="" /></h2>
+        <div class="nino-copy">
+          <p>Frente a estos escenarios, <strong>la prevención y el mantenimiento de la infraestructura hídrica son fundamentales.</strong></p>
+          <p>Por eso creamos este mapa: una <strong class="highlight">herramienta para identificar y prevenir los riesgos relacionados con el agua</strong>, principalmente inundaciones, desbordes de ríos y acumulaciones de agua por lluvias intensas, de cara a la llegada de El Niño.</p>
+          <p>El mapa permite hacer visibles los problemas, ordenar los reclamos y generar información confiable para que los vecinos puedan organizarse y prevenir situaciones de riesgo.</p>
         </div>
       </section>
 
-      <section class="bg-mist px-6 py-16 sm:px-10 lg:px-14 lg:py-24">
-        <div class="mx-auto max-w-6xl">
-          <div class="grid gap-10 lg:grid-cols-2 lg:gap-20">
-            <div><p class="ui-label text-river">Escala regional</p><h2 class="mt-3 max-w-lg text-3xl font-semibold tracking-[-.04em] sm:text-4xl">¿Cómo puede afectar a nuestra región?</h2></div>
-            <div><p class="text-base leading-relaxed text-ink/62">Aquí se explicará la relación posible con Santa Fe y el Litoral argentino a partir de fuentes verificadas, distinguiendo patrones generales, condiciones actuales y niveles de incertidumbre.</p><p class="mt-5 inline-flex rounded-full border border-ink/10 bg-white px-3 py-1.5 ui-label text-[9px] text-ink/45">Contenido científico en preparación</p></div>
-          </div>
-          <div class="mt-14"><ClimateStatus /></div>
-        </div>
-      </section>
+      <p class="nino-callout">A partir de esta información, vamos a poder coordinar acciones con el Gobierno Municipal, agilizar reclamos y exigir que los problemas se solucionen antes de que una emergencia los convierta en un riesgo para miles de familias.</p>
 
-      <section class="px-6 py-16 sm:px-10 lg:px-14 lg:py-24">
-        <div class="mx-auto max-w-6xl">
-          <div class="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-20">
-            <div><p class="ui-label text-river">Lectura local</p><h2 class="mt-3 text-3xl font-semibold tracking-[-.04em] sm:text-4xl">¿Qué significa<br>para Santa Fe?</h2><p class="mt-5 max-w-md text-sm leading-relaxed text-ink/55">Estas variables se mostrarán cuando existan datos vinculados a una fuente y una fecha de actualización.</p></div>
-            <div class="grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2">
-              <div v-for="indicator in indicators" :key="indicator.label" class="min-h-40 bg-white p-5 sm:p-6"><component :is="indicator.icon" :size="21" class="text-river"/><p class="mt-8 text-sm font-semibold">{{ indicator.label }}</p><p class="mt-2 text-xs text-ink/45">{{ indicator.detail }}</p></div>
-            </div>
-          </div>
-        </div>
+      <section id="documentos" class="documents" aria-labelledby="documents-title">
+        <h2 id="documents-title" class="sr-only">Documentos oficiales sobre la emergencia hídrica</h2>
+        <a v-for="document in documents" :key="document.title" class="document-card" :href="document.url" target="_blank" rel="noopener noreferrer" :aria-label="`${document.title} (PDF, abre en una pestaña nueva)`">
+          <span class="document-art" aria-hidden="true" />
+          <span class="document-card-bottom"><strong>{{ document.title }}</strong><ArrowUpRight :size="22" aria-hidden="true" /></span>
+        </a>
       </section>
-
-      <ClimateSourcesPanel />
     </div>
     <AppFooter />
   </div>
 </template>
+
+<style scoped>
+.nino-page { min-height: 100vh; background: #f7f7f7; }
+.nino-content { max-width: 780px; margin: 0 22px 0 clamp(22px, 7vw, 90px); padding: 44px 0 68px; }
+h1 img { display: block; width: min(438px, 100%); height: auto; }
+.nino-copy { max-width: 620px; margin-top: 34px; font-size: 20px; line-height: 1.4; }
+.nino-copy p + p { margin-top: 22px; }
+.nino-copy strong { font-weight: 700; }
+.nino-source { font-size: 14px; line-height: 1.5; color: #56677b; }
+.nino-source a { color: #1c6b9d; text-decoration: underline; text-underline-offset: 3px; }
+.nino-purpose { margin-top: 62px; }
+.nino-purpose h2 img { display: block; width: min(298px, 100%); height: auto; }
+.nino-purpose .nino-copy { margin-top: 30px; }
+.highlight { background: #4ba6de; color: white; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.nino-callout { max-width: 720px; margin-top: 62px; font-size: 26px; font-weight: 500; line-height: 1.46; }
+.documents { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 690px; margin-top: 72px; }
+.document-card { display: flex; min-height: 188px; overflow: hidden; flex-direction: column; border-radius: 9px; background: #95bf3f; color: white; box-shadow: 2px 3px 8px #0002; transition: transform .16s, box-shadow .16s; }
+.document-card:hover { transform: translateY(-3px); box-shadow: 3px 7px 16px #0003; }
+.document-art { display: block; height: 58px; flex: none; background: #e7f4cb url('/figma/el-nino/card-texture.png') center 46% / cover; }
+.document-card-bottom { display: flex; min-height: 130px; flex: 1; align-items: end; justify-content: space-between; gap: 12px; padding: 22px 18px 18px; }
+.document-card-bottom strong { max-width: 240px; font-size: 21px; font-weight: 600; line-height: 1.22; }
+.document-card-bottom svg { flex: none; }
+@media (max-width: 700px) {
+  .nino-content { padding: 34px 0 56px; }
+  .nino-copy { font-size: 17px; }
+  .nino-callout { font-size: 21px; }
+  .documents { gap: 14px; }
+  .document-card-bottom strong { font-size: 16px; }
+}
+@media (max-width: 480px) { .documents { grid-template-columns: 1fr; } }
+</style>

@@ -65,6 +65,7 @@ export type RiverLevelReading = {
   lowWaterLevel: number | null
   alertLevel: number | null
   evacuationLevel: number | null
+  thresholdsLoaded: boolean
   status: RiverLevelStatus
   trend: RiverLevelTrend
   isStale: boolean

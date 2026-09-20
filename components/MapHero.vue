@@ -1,3 +1,7 @@
+<script setup lang="ts">
+withDefaults(defineProps<{ asHeading?: boolean }>(), { asHeading: true })
+</script>
+
 <template>
   <header class="map-hero" aria-label="Mapa del agua">
     <div class="risk-banner">
@@ -7,11 +11,11 @@
 
     <div class="hero-grid" aria-hidden="true" />
     <div class="hero-map" aria-hidden="true">
-      <img src="/figma/header-map.png" alt="" />
+      <img src="/figma/header-map.png" alt="" decoding="async" fetchpriority="low" />
     </div>
 
     <div class="hero-content">
-      <h1><img src="/figma/header-logo.png" width="542" height="143" alt="Mapa del agua" /></h1>
+      <component :is="asHeading ? 'h1' : 'div'" class="hero-title"><span v-if="asHeading" class="sr-only">Mapa del Agua de Santa Fe</span><img src="/figma/header-logo.png" width="542" height="143" :alt="asHeading ? '' : 'Mapa del Agua'" /></component>
       <p class="hero-tagline">Un mapa de prevención y gestión del riesgo hídrico</p>
       <p class="hero-description">
         Un lugar donde cualquier vecino puede denunciar<br class="desktop-break" />
@@ -89,8 +93,8 @@
   margin-left: max(32px, calc((100% - 1102px) / 2));
   padding-top: 53px;
 }
-h1 { margin: 0; }
-h1 img { display: block; width: 542px; height: 143px; object-fit: contain; }
+.hero-title { margin: 0; }
+.hero-title img { display: block; width: 542px; height: 143px; object-fit: contain; }
 .hero-tagline {
   display: flex;
   width: 537px;
@@ -116,7 +120,7 @@ h1 img { display: block; width: 542px; height: 143px; object-fit: contain; }
   .hero-map { top: 54px; width: 100%; height: 356px; opacity: .34; }
   .hero-map img { top: -65px; left: 10%; width: 680px; height: auto; }
   .hero-content { width: auto; margin: 0; padding: 60px 22px 0; }
-  h1 img { width: min(100%, 430px); height: auto; }
+  .hero-title img { width: min(100%, 430px); height: auto; }
   .hero-tagline { width: min(calc(100% - 8px), 426px); height: auto; min-height: 38px; margin-top: -10px; padding: 6px 12px; font-size: 12px; line-height: 16px; text-align: center; }
   .hero-description { max-width: 410px; margin-top: 18px; font-size: 13px; line-height: 19px; }
   .desktop-break { display: none; }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BaseMapKind, MapLayerDefinition } from '~/types/map'
 import { reportDesignOrder } from '~/utils/reportDesign'
-const props = defineProps<{ layers: MapLayerDefinition[], reportCount?: number, hideTrigger?: boolean, recentImageryAvailable?: boolean }>()
+const props = defineProps<{ layers: MapLayerDefinition[], reportCount?: number, hideTrigger?: boolean }>()
 const emit = defineEmits<{ toggle: [id: string] }>()
 const open = defineModel<boolean>('open', { default: false })
 const baseMap = defineModel<BaseMapKind>('baseMap', { default: 'simple' })
@@ -10,11 +10,11 @@ const expandedInfoId = ref<string | null>(null)
 const reportsExpanded = ref(true)
 const order = ['citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
 const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)))
-const baseMapOptions = computed(() => [
+// La opción Copernicus queda oculta hasta que se retire su integración.
+const baseMapOptions = [
   { value: 'simple' as const, label: 'Simple' },
   { value: 'satellite' as const, label: 'Detallado' },
-  ...(props.recentImageryAvailable ? [{ value: 'recent' as const, label: 'Reciente' }] : []),
-])
+]
 </script>
 
 <template>

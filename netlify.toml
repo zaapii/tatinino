@@ -8,9 +8,12 @@
 [[redirects]]
   from = "/"
   to = "/mapa"
-  status = 302
+  status = 301
+  force = true
 
+# Las notas publicadas después del último build siguen abiertas hasta el próximo despliegue.
+# Las páginas ya prerenderizadas tienen prioridad sobre esta regla.
 [[redirects]]
-  from = "/*"
+  from = "/novedades/*"
   to = "/200.html"
   status = 200

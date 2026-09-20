@@ -11,7 +11,7 @@ defineProps<{ article: Article; featured?: boolean }>()
       <NewsArticleVisual :variant="article.visual" :compact="!featured" class="transition-transform duration-500 group-hover:-translate-y-1" />
       <div class="mt-5 flex items-start justify-between gap-5">
         <div>
-          <div class="flex flex-wrap items-center gap-2.5 ui-label text-[9px]"><span class="text-river">{{ article.category }}</span><span class="size-1 rounded-full bg-ink/22"/><span class="text-ink/42">{{ article.publishedAt }}</span></div>
+          <div class="flex flex-wrap items-center gap-2.5 ui-label text-[9px]"><span class="text-river">{{ article.category }}</span><span class="size-1 rounded-full bg-ink/22"/><time class="text-ink/42" :datetime="article.publishedOn">{{ article.publishedAt }}</time></div>
           <h2 class="mt-3 font-semibold leading-[1.06] tracking-[-.035em] transition-colors group-hover:text-river" :class="featured ? 'max-w-3xl text-3xl sm:text-4xl lg:text-[2.7rem]' : 'text-[1.35rem] sm:text-2xl'">{{ article.title }}</h2>
           <p class="mt-3 max-w-2xl text-sm leading-relaxed text-ink/58">{{ article.excerpt }}</p>
         </div>

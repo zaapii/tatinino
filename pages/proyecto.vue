@@ -2,8 +2,12 @@
 import { ArrowDown, BookOpenCheck, UsersRound, RadioTower, Layers3, ShieldCheck, CloudRain, MessageSquareWarning, Building2, ArrowRight, CircleCheckBig } from 'lucide-vue-next'
 
 useSeoMeta({
-  title: 'Acerca del proyecto',
+  title: 'Acerca del Mapa del Agua',
   description: 'Una infraestructura pública de conocimiento, prevención y organización comunitaria frente al riesgo hídrico en Santa Fe.',
+  ogTitle: 'Acerca del proyecto | Mapa del Agua',
+  ogDescription: 'Conocé el proyecto de información hídrica y prevención comunitaria en Santa Fe.',
+  twitterTitle: 'Acerca del Mapa del Agua',
+  twitterDescription: 'Conocé el proyecto de información hídrica y prevención comunitaria en Santa Fe.',
 })
 
 const pillars = [

@@ -16,6 +16,8 @@ function showPolicy() { open.value = false; emit('policy') }
     <nav v-if="open" class="space-y-2 bg-[#3a4863] p-4 shadow-xl" aria-label="Secciones principales">
       <NuxtLink to="/mapa" class="flex items-center gap-2 rounded-md p-2 text-[13px]" :class="route.path === '/mapa' ? 'bg-[#1a2741]' : ''"><img src="/figma/nav-map.svg" width="32" height="32" alt="" />Mapa</NuxtLink>
       <NuxtLink to="/el-nino" class="flex items-center gap-2 rounded-md p-2 text-[13px]" :class="route.path === '/el-nino' ? 'bg-[#1a2741]' : ''"><img src="/figma/nav-weather.svg" width="32" height="32" alt="" />El Niño</NuxtLink>
+      <NuxtLink to="/novedades" class="flex items-center gap-2 rounded-md p-2 text-[13px]" :class="route.path.startsWith('/novedades') ? 'bg-[#1a2741]' : ''"><img src="/figma/reports.svg" width="32" height="32" alt="" />Novedades</NuxtLink>
+      <NuxtLink to="/proyecto" class="flex items-center gap-2 rounded-md p-2 text-[13px]" :class="route.path === '/proyecto' ? 'bg-[#1a2741]' : ''"><img src="/figma/info.svg" width="32" height="32" alt="" />Proyecto</NuxtLink>
       <button class="px-2 py-4 text-xs" @click="showPolicy">Política de datos</button>
     </nav>
   </header>

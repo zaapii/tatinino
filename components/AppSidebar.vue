@@ -3,13 +3,13 @@ const emit = defineEmits<{ policy: [] }>()
 const route = useRoute()
 const items = [
   { to: '/mapa', label: 'Mapa', icon: '/figma/nav-map.svg' },
-  { to: '/el-nino', label: 'El Niño', icon: '/figma/nav-weather.svg' },
+  { to: '/el-nino', label: 'El Niño', icon: '/figma/nav-weather.svg' }
 ]
 const isActive = (to: string) => to === '/mapa' ? ['/', '/mapa'].includes(route.path.replace(/\/$/, '') || '/') : route.path.startsWith(to)
 </script>
 
 <template>
-  <aside class="map-sidebar sticky top-0 z-40 h-dvh flex-col">
+  <aside class="map-sidebar fixed inset-y-0 left-0 z-40 h-dvh w-[154px] flex-col">
     <NuxtLink to="/mapa" class="sidebar-logo" aria-label="Mapa del agua"><img src="/figma/sidebar-logo.png" width="91" height="79" alt="Mapa del agua" /></NuxtLink>
     <nav aria-label="Secciones principales">
       <NuxtLink v-for="item in items" :key="item.to" :to="item.to" :class="{ active: isActive(item.to) }" :aria-current="isActive(item.to) ? 'page' : undefined"><img :src="item.icon" width="32" height="32" alt="" />{{ item.label }}</NuxtLink>
