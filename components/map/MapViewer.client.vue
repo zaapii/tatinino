@@ -217,6 +217,9 @@ const riverLevelMarkerImageId = 'river-level-marker'
 const draftSourceId = 'citizen-report-draft'
 const draftHaloLayerId = 'citizen-report-draft-halo'
 const draftPointLayerId = 'citizen-report-draft-point'
+const garelloReportId = 'e3010b60-21e0-45a2-bac6-8e15c44c8e4b'
+const garelloReportHaloLayerId = 'citizen-reports-garello-halo'
+const garelloOrange = '#f97316'
 
 const reportStatusLabels: Record<CitizenReport['status'], string> = {
   pending: 'Pendiente de revisión',
@@ -465,13 +468,41 @@ function simplifyBaseMap() {
 }
 
 function startReportPulse() {
-  if (!map || reportPulseTimer || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (
+    !map
+    || reportPulseTimer
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) return
+
   let bright = true
+
   reportPulseTimer = setInterval(() => {
-    if (!map?.getLayer(reportHaloLayerId)) return
     bright = !bright
-    map.setPaintProperty(reportHaloLayerId, 'circle-opacity', bright ? 0.48 : 0.14)
-  }, 850)
+
+    if (map?.getLayer(reportHaloLayerId)) {
+      map.setPaintProperty(
+        reportHaloLayerId,
+        'circle-opacity',
+        bright ? 0.48 : 0.14,
+      )
+    }
+
+    if (map?.getLayer(garelloReportHaloLayerId)) {
+      map.setPaintProperty(
+        garelloReportHaloLayerId,
+        'circle-opacity',
+        bright ? 0.75 : 0.12,
+      )
+
+      map.setPaintProperty(
+        garelloReportHaloLayerId,
+        'circle-radius',
+        bright
+          ? ['interpolate', ['linear'], ['zoom'], 9, 34, 16, 49]
+          : ['interpolate', ['linear'], ['zoom'], 9, 25, 16, 37],
+      )
+    }
+  }, 700)
 }
 
 function updateBaseVisibility(visible: boolean) {
@@ -867,6 +898,40 @@ function addCitizenReportLayers() {
   if (!map.getSource(reportSourceId)) map.addSource(reportSourceId, { type: 'geojson', data: reportGeoJson() })
   else updateReportData()
 
+  if (!map.getLayer(garelloReportHaloLayerId)) {
+    map.addLayer({
+      id: garelloReportHaloLayerId,
+      source: reportSourceId,
+      type: 'circle',
+
+      filter: [
+        '==',
+        ['get', 'id'],
+        garelloReportId,
+      ],
+
+      layout: {
+        visibility: props.reportsVisible ? 'visible' : 'none',
+      },
+
+      paint: {
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9, 28,
+          16, 42,
+        ],
+
+        'circle-color': garelloOrange,
+        'circle-opacity': 0.65,
+        'circle-blur': 0.35,
+        'circle-translate': [0, -25],
+        'circle-translate-anchor': 'viewport',
+      },
+    })
+  }
+
   if (!map.getLayer(reportHaloLayerId)) {
     map.addLayer({
       id: reportHaloLayerId,
@@ -892,7 +957,35 @@ function addCitizenReportLayers() {
       layout: {
         visibility: props.reportsVisible ? 'visible' : 'none',
         'icon-image': reportIconExpression,
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.72, 13, 0.86, 17, 1],
+        'icon-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+
+          9,
+          [
+            'case',
+            ['==', ['get', 'id'], garelloReportId],
+            1.05,
+            0.72,
+          ],
+
+          13,
+          [
+            'case',
+            ['==', ['get', 'id'], garelloReportId],
+            1.25,
+            0.86,
+          ],
+
+          17,
+          [
+            'case',
+            ['==', ['get', 'id'], garelloReportId],
+            1.45,
+            1,
+          ],
+        ],
         'icon-anchor': 'bottom',
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
@@ -932,8 +1025,19 @@ function updateDraftData() {
 
 function updateReportVisibility(visible: boolean) {
   if (!map || !styleReady) return
-  for (const layerId of [reportHaloLayerId, reportPointLayerId]) {
-    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
+
+  for (const layerId of [
+    reportHaloLayerId,
+    garelloReportHaloLayerId,
+    reportPointLayerId,
+  ]) {
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(
+        layerId,
+        'visibility',
+        visible ? 'visible' : 'none',
+      )
+    }
   }
 }
 
@@ -968,7 +1072,21 @@ function syncHydraulicLayers() {
     }
   }
 
-  for (const layerId of [riverLevelHaloLayerId, riverLevelPointLayerId, riverLevelLabelLayerId, riverLevelAlertLabelLayerId, riverLevelEvacuationLabelLayerId, riverLevelReferenceLayerId, reportHaloLayerId, reportPointLayerId, draftHaloLayerId, draftPointLayerId]) {
+  for (const layerId of [
+    riverLevelHaloLayerId,
+    riverLevelPointLayerId,
+    riverLevelLabelLayerId,
+    riverLevelAlertLabelLayerId,
+    riverLevelEvacuationLabelLayerId,
+    riverLevelReferenceLayerId,
+
+    reportHaloLayerId,
+    garelloReportHaloLayerId,
+    reportPointLayerId,
+
+    draftHaloLayerId,
+    draftPointLayerId,
+  ]) {
     if (map.getLayer(layerId)) map.moveLayer(layerId)
   }
 }

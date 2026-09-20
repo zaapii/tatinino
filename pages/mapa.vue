@@ -178,9 +178,9 @@ onBeforeUnmount(() => {
 
     <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
     <a v-if="!selectedPoint && !placingReport && !layersOpen && !reportOpen" href="#obra-garello" class="garello-map-card">
-      <span class="garello-map-status">Obra paralizada</span>
+      <span class="garello-map-status">Obra inconclusas</span>
       <strong>Terraplén Garello</strong>
-      <span>Colastiné Sur · Ver información ↓</span>
+      <span>Colastiné Norte · Ver información ↓</span>
     </a>
     <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />

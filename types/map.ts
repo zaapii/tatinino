@@ -35,6 +35,7 @@ export type MapSelection = MapPoint & {
 }
 
 export type CitizenReport = {
+  isGarello?: boolean
   id: string
   topic: string
   description: string

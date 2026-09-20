@@ -155,10 +155,10 @@ onBeforeUnmount(() => riverObserver?.disconnect())
         <h2 class="impact-title">Obras de infraestructura</h2>
         <p class="impact-intro">Estado de las obras que afectan directamente al riesgo hídrico.</p>
         <article id="obra-garello" class="garello-card" aria-labelledby="garello-title">
-          <div class="garello-card-top"><span>Obra de protección hídrica</span><strong>Obra paralizada</strong></div>
+          <div class="garello-card-top"><span>Obra de protección hídrica</span><strong>Obra inconclusa</strong></div>
           <h3 id="garello-title">Terraplén Garello</h3>
           <p class="garello-location">Colastiné Sur · Santa Fe</p>
-          <p class="garello-description">La obra del terraplén se encuentra paralizada. Su estado es relevante para la protección hídrica del sector.</p>
+          <p class="garello-description">La obra del terraplén se encuentra inconclusa. Su estado es relevante para la protección hídrica del sector.</p>
         </article>
       </section>
 
