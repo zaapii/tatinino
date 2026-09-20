@@ -143,7 +143,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-  <section class="relative h-dvh overflow-hidden bg-[#dfe9e8] lg:h-[915px]" aria-label="Mapa interactivo">
+  <section
+    class="relative z-20 h-dvh overflow-visible bg-[#dfe9e8] lg:h-[915px]"
+    aria-label="Mapa interactivo"
+  >
     <ClientOnly>
       <MapViewerClient
         :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
@@ -177,11 +180,6 @@ onBeforeUnmount(() => {
     </div>
 
     <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
-    <a v-if="!selectedPoint && !placingReport && !layersOpen && !reportOpen" href="#obra-garello" class="garello-map-card">
-      <span class="garello-map-status">Obra inconclusas</span>
-      <strong>Terraplén Garello</strong>
-      <span>Colastiné Norte · Ver información ↓</span>
-    </a>
     <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
     <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
 

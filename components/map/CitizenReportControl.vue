@@ -2,7 +2,6 @@
 import { Building2, Camera, CheckCircle2, LoaderCircle, LocateFixed, MapPin, MessageSquareWarning, Navigation, X } from 'lucide-vue-next'
 import type { CitizenReportForm, MapPoint } from '~/types/map'
 import { isReportPointInBounds } from '~/utils/reportLocation'
-import { useReportAddressLookup } from '~/composables/useReportAddressLookup'
 import { citizenReportCategories } from '~/utils/citizenReportCategories'
 
 const props = defineProps<{
@@ -45,38 +44,7 @@ const addressResults = ref<Array<{ label: string, point: MapPoint }>>([])
 const locating = ref(false)
 const locationError = ref('')
 const locationHint = ref('')
-const { searchAddress } = useReportAddressLookup()
 let locationRequestId = 0
-
-function invalidateAddress() {
-  ++locationRequestId
-  locating.value = false
-  addressResults.value = []
-  locationError.value = ''
-  locationHint.value = ''
-  emit('clearLocation')
-  selectedAddress.value = ''
-}
-
-async function findAddress() {
-  if (!address.value.trim() || locating.value) return
-  const requestId = ++locationRequestId
-  locating.value = true
-  locationError.value = ''
-  addressResults.value = []
-  try {
-    const results = await searchAddress(address.value.trim())
-    if (requestId !== locationRequestId) return
-    addressResults.value = results
-    if (!results.length) locationError.value = 'No encontramos esa dirección en Santa Fe. Probá con otra dirección o marcá el punto en el mapa.'
-  }
-  catch {
-    if (requestId === locationRequestId) locationError.value = 'No pudimos buscar la dirección. Podés marcar el punto en el mapa.'
-  }
-  finally {
-    if (requestId === locationRequestId) locating.value = false
-  }
-}
 
 function selectAddress(result: { label: string, point: MapPoint }) {
   ++locationRequestId
@@ -284,13 +252,6 @@ onBeforeUnmount(() => {
 
           <div>
             <p class="ui-label text-[9px] text-ink/50">4. Ubicación · Obligatoria</p>
-            <label class="mt-2 block text-[11px] text-ink/60">Escribir la dirección
-              <input v-model="address" maxlength="300" placeholder="Calle y altura, Santa Fe" class="mt-1.5 w-full rounded-xl border border-ink/14 px-3 py-3 text-xs" @input="invalidateAddress" @keydown.enter.prevent="findAddress">
-            </label>
-            <button type="button" :disabled="!address.trim() || locating" class="mt-2 rounded-lg border border-river/25 px-3 py-2 text-xs font-semibold text-river disabled:opacity-40" @click="findAddress">Buscar dirección</button>
-            <ul v-if="addressResults.length" class="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/14" aria-label="Direcciones encontradas">
-              <li v-for="result in addressResults" :key="result.label"><button type="button" class="w-full p-3 text-left text-xs leading-relaxed hover:bg-mist" @click="selectAddress(result)">{{ result.label }}</button></li>
-            </ul>
             <div v-if="location" class="mt-1.5 flex items-center gap-3 rounded-xl border border-[#d94841]/20 bg-[#d94841]/6 p-3">
               <span class="grid size-9 shrink-0 place-items-center rounded-full bg-[#d94841] text-white"><MapPin :size="17"/></span>
               <div class="min-w-0 flex-1"><p class="text-xs font-semibold">Punto marcado</p><p class="mt-0.5 truncate font-mono text-[9px] text-ink/46">{{ location.latitude.toFixed(6) }}, {{ location.longitude.toFixed(6) }}</p></div>
