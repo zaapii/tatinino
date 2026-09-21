@@ -2,12 +2,32 @@
 import { ArrowUpRight } from 'lucide-vue-next'
 
 useSeoMeta({
-  title: 'El Niño en Santa Fe',
+  title: 'El Niño en Santa Fe - Mapa del Agua',
   description: 'Qué es el fenómeno de El Niño, cómo puede influir en las lluvias de Santa Fe y qué documentos oficiales regulan la emergencia hídrica.',
-  ogTitle: 'El Niño en Santa Fe | Mapa del Agua',
+  ogTitle: 'El Niño en Santa Fe - Mapa del Agua - Tati Restagno',
   ogDescription: 'Qué es El Niño y qué documentos oficiales regulan la emergencia hídrica en Santa Fe.',
-  twitterTitle: 'El Niño en Santa Fe | Mapa del Agua',
+  twitterTitle: 'El Niño en Santa Fe - Mapa del Agua - Tati Restagno',
   twitterDescription: 'Qué es El Niño y qué documentos oficiales regulan la emergencia hídrica en Santa Fe.',
+})
+
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'El Niño en Santa Fe - Mapa del Agua - Tati Restagno',
+      headline: 'El Niño en Santa Fe',
+      url: 'https://tatirestagno.com/el-nino/',
+      description: 'Qué es el fenómeno de El Niño, cómo puede influir en las lluvias de Santa Fe y qué documentos oficiales regulan la emergencia hídrica.',
+      isPartOf: {
+        '@type': 'WebSite',
+        name: 'Mapa del Agua - Tati Restagno',
+        url: 'https://tatirestagno.com/mapa/',
+      },
+      inLanguage: 'es-AR',
+    }),
+  }],
 })
 
 const documents = [
@@ -40,7 +60,7 @@ const documents = [
 
       <h1>
         <span class="sr-only">
-          ¿Qué es el fenómeno de El Niño?
+          El Niño en Santa Fe
         </span>
 
         <img
