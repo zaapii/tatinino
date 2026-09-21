@@ -91,6 +91,7 @@ async function fetchImageryDate() {
 }
 let reportPopup: Popup | undefined
 let garelloMarker: Marker | undefined
+let garelloMarkerDismissed = false
 let createGarelloMarker: ((element: HTMLElement) => Marker) | undefined
 let popupResizeObserver: ResizeObserver | undefined
 let createPopup: (() => Popup) | undefined
@@ -714,7 +715,7 @@ function selectGarelloReport() {
 function syncGarelloMarker() {
   if (!map || !styleReady || !createGarelloMarker) return
   const report = garelloReport()
-  if (!report) {
+  if (!report || garelloMarkerDismissed) {
     garelloMarker?.remove()
     garelloMarker = undefined
     return
@@ -725,12 +726,20 @@ function syncGarelloMarker() {
     element.className = 'garello-map-marker'
     element.setAttribute('aria-label', 'Obra inconclusa: Terraplén Garello')
     element.innerHTML = `
+      <button type="button" class="garello-map-marker-close" aria-label="Cerrar alerta del Terraplén Garello">×</button>
       <span class="garello-map-marker-status">Obra inconclusa</span>
       <strong>Terraplén Garello</strong>
       <span class="garello-map-marker-copy">Obra de protección hídrica pendiente.</span>
       <button type="button" style="background-color: #b73b1d;">Más información</button>
       <i aria-hidden="true"></i>
     `
+    element.querySelector<HTMLButtonElement>('.garello-map-marker-close')?.addEventListener('click', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      garelloMarkerDismissed = true
+      garelloMarker?.remove()
+      garelloMarker = undefined
+    })
     element.addEventListener('click', event => {
       event.preventDefault()
       event.stopPropagation()
@@ -1474,6 +1483,30 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 10px;
   font-weight: 750;
+}
+:global(.garello-map-marker .garello-map-marker-close) {
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  right: 7px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  margin: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  color: #607087;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+:global(.garello-map-marker .garello-map-marker-close:hover),
+:global(.garello-map-marker .garello-map-marker-close:focus-visible) {
+  background: #eef1f5;
+  color: #172640;
 }
 :global(.garello-map-marker i) {
   position: absolute;
