@@ -15,6 +15,7 @@ export type MunicipalWeatherStation = {
 
 const MUNICIPAL_WEATHER_URL = 'https://santafeciudad.gov.ar/wp-json/clima/v1/datos'
 const WEATHER_PROXY_URL = '/api/meteorologia'
+const WEATHER_FALLBACK_URL = '/data/meteorologia-respaldo.json'
 
 type ApiRecord = Record<string, unknown>
 
@@ -59,7 +60,8 @@ function normalizeStation(station: ApiRecord, index: number): MunicipalWeatherSt
 
 export function useMunicipalWeatherStations() {
   async function fetchStations() {
-    const response = await fetch(WEATHER_PROXY_URL, { headers: { Accept: 'application/json' } })
+    let response = await fetch(WEATHER_PROXY_URL, { headers: { Accept: 'application/json' } })
+    if (!response.ok) response = await fetch(WEATHER_FALLBACK_URL, { headers: { Accept: 'application/json' } })
     if (!response.ok) throw new Error(`La API municipal respondió ${response.status}`)
     const stations = stationsFrom(await response.json()).map(normalizeStation)
     if (!stations.length) throw new Error('La API municipal no devolvió estaciones.')
