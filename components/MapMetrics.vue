@@ -157,7 +157,7 @@ onBeforeUnmount(() => riverObserver?.disconnect())
         <article id="obra-garello" class="garello-card" aria-labelledby="garello-title">
           <div class="garello-card-top"><span>Obra de protección hídrica</span><strong>Obra inconclusa</strong></div>
           <h3 id="garello-title">Terraplén Garello</h3>
-          <p class="garello-location">Colastiné Sur · Santa Fe</p>
+          <p class="garello-location">Colastiné Norte · Santa Fe</p>
           <p class="garello-description">La obra del terraplén se encuentra inconclusa. Su estado es relevante para la protección hídrica del sector.</p>
         </article>
       </section>
