@@ -4,7 +4,6 @@ import { citizenReportCategories } from '~/utils/citizenReportCategories'
 import { reportDesignIcons } from '~/utils/reportDesign'
 import type { CitizenReport, RiverLevelReading } from '~/types/map'
 import type { WeatherForecast } from '~/composables/useWeatherForecast'
-import type { MunicipalWeatherStation } from '~/composables/useMunicipalWeatherStations'
 
 const props = defineProps<{
   reports: CitizenReport[]
@@ -19,10 +18,6 @@ const weather = ref<WeatherForecast | null>(null)
 const weatherLoading = ref(true)
 const weatherError = ref('')
 const { fetchForecast } = useWeatherForecast()
-const stations = ref<MunicipalWeatherStation[]>([])
-const stationsLoading = ref(true)
-const stationsError = ref('')
-const { fetchStations, municipalWeatherUrl } = useMunicipalWeatherStations()
 let riverObserver: IntersectionObserver | undefined
 let reduceMotion = false
 const riverElements = new Map<string, HTMLElement>()
@@ -112,17 +107,8 @@ async function loadWeather() {
   finally { weatherLoading.value = false }
 }
 
-async function loadStations() {
-  stationsLoading.value = true
-  stationsError.value = ''
-  try { stations.value = await fetchStations() }
-  catch { stationsError.value = 'Los datos de las estaciones municipales no están disponibles en este momento.' }
-  finally { stationsLoading.value = false }
-}
-
 onMounted(() => {
   void loadWeather()
-  void loadStations()
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (reduceMotion) return
   riverObserver = new IntersectionObserver((entries) => {
@@ -216,37 +202,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
         <div v-else class="weather-error"><span>{{ weatherError }}</span><button @click="loadWeather"><RefreshCw :size="14" /> Reintentar</button></div>
       </section>
 
-      <section class="impact-block stations-block" aria-labelledby="stations-title">
-        <div class="stations-heading">
-          <div>
-            <h2 id="stations-title" class="impact-title">Estaciones meteorológicas</h2>
-            <p class="impact-intro">Condiciones actuales registradas por la red municipal.</p>
-          </div>
-        </div>
-
-        <div v-if="stations.length" class="stations-grid">
-          <article v-for="station in stations" :key="station.id" class="station-card">
-            <header>
-              <h3>{{ station.name === '—' ? 'Estación municipal' : station.name }}</h3>
-              <p v-if="station.updatedAt !== '—'">{{ station.updatedAt }}</p>
-            </header>
-            <dl>
-              <div><dt>Temperatura</dt><dd>{{ station.temperature }}</dd></div>
-              <div><dt>Humedad</dt><dd>{{ station.humidity }}</dd></div>
-              <div><dt>Presión</dt><dd>{{ station.pressure }}</dd></div>
-              <div><dt>Tendencia bárica</dt><dd>{{ station.barometricTrend }}</dd></div>
-              <div><dt>Viento</dt><dd>{{ station.wind }}</dd></div>
-              <div><dt>Ráfaga</dt><dd>{{ station.gust }}</dd></div>
-              <div><dt>Lluvia hoy</dt><dd>{{ station.rainToday }}</dd></div>
-              <div><dt>Acumulado mensual</dt><dd>{{ station.rainMonth }}</dd></div>
-              <div><dt>Último evento</dt><dd>{{ station.lastRain }}</dd></div>
-            </dl>
-          </article>
-        </div>
-        <div v-else-if="stationsLoading" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Consultando estaciones municipales…</div>
-        <div v-else class="weather-error"><span>{{ stationsError }}</span><button @click="loadStations"><RefreshCw :size="14" /> Reintentar</button></div>
-      </section>
-
       <footer class="impact-footer">
         <ShareLinks />
       </footer>
@@ -306,20 +261,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .loading-row { display: flex; min-height: 110px; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,.6); font-size: 12px; }
 .weather-error { display: flex; align-items: center; gap: 12px; margin-top: 20px; color: rgba(255,255,255,.65); font-size: 12px; }
 .weather-error button { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 7px 10px; cursor: pointer; }
-.stations-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
-.stations-heading > a { flex: 0 0 auto; color: #a7cae6; font-size: 10px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.stations-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
-.station-card { overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: #273754; }
-.station-card header { min-height: 70px; border-bottom: 1px solid rgba(255,255,255,.12); padding: 14px 15px 11px; }
-.station-card h3 { font-size: 15px; font-weight: 750; }
-.station-card header p { margin-top: 5px; color: #a7cae6; font-size: 9px; }
-.station-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.station-card dl > div { min-height: 62px; border-right: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); padding: 10px 11px; }
-.station-card dl > div:nth-child(even) { border-right: 0; }
-.station-card dl > div:last-child { grid-column: span 2; border-bottom: 0; }
-.station-card dt { color: rgba(255,255,255,.55); font-size: 9px; }
-.station-card dd { margin-top: 5px; color: #fff; font-size: 14px; font-weight: 750; line-height: 1.1; overflow-wrap: anywhere; }
-.station-card dd small { color: #a7cae6; font-size: 9px; font-weight: 600; }
 .impact-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 90px; border-top: 1px solid rgba(255,255,255,.18); padding: 35px 0 0; }
 @keyframes river-rise { to { width: var(--level); } }
 @media (max-width: 700px) {
@@ -338,7 +279,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
   .forecast-strip { grid-template-columns: repeat(3, 1fr); }
   .forecast-day:nth-child(3) { border-right: 0; }
   .forecast-day:nth-child(-n+3) { border-bottom: 1px solid #d7dce5; }
-  .stations-grid { grid-template-columns: 1fr; }
   .impact-footer { align-items: flex-start; flex-direction: column; margin-top: 70px; }
 }
 @media (prefers-reduced-motion: reduce) { .river-track.animated .river-progress { width: var(--level); animation: none; } }
