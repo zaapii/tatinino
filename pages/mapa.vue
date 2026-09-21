@@ -39,6 +39,8 @@ const { fetchRiverLevels } = useRiverLevels()
 let stopReportSubscription: (() => void) | undefined
 let reportRefreshTimer: ReturnType<typeof setInterval> | undefined
 let riverLevelRefreshTimer: ReturnType<typeof setInterval> | undefined
+let riverLevelRetryTimer: ReturnType<typeof setTimeout> | undefined
+let riverLevelRetryDelay = 5_000
 const waterVisible = computed(() => layers.value.find(layer => layer.id === 'water')?.enabled ?? true)
 const reportsVisible = computed(() => layers.value.find(layer => layer.id === 'citizen-reports')?.enabled ?? true)
 const riverLevelsVisible = computed(() => layers.value.find(layer => layer.id === 'river-levels')?.enabled ?? true)
@@ -107,16 +109,33 @@ async function syncRiverLevels(force = false) {
   try {
     const nextLevels = await fetchRiverLevels(force)
     riverLevels.value = nextLevels
-    riverLevelsError.value = nextLevels.every(reading => reading.error)
+    const allFailed = nextLevels.every(reading => reading.error)
+    riverLevelsError.value = allFailed
       ? 'No se pudieron consultar las escalas oficiales de los ríos.'
       : ''
+    if (allFailed) scheduleRiverLevelRetry()
+    else {
+      if (riverLevelRetryTimer) clearTimeout(riverLevelRetryTimer)
+      riverLevelRetryTimer = undefined
+      riverLevelRetryDelay = 5_000
+    }
   }
   catch (error) {
     riverLevelsError.value = error instanceof Error ? error.message : 'No se pudieron consultar los niveles de los ríos.'
+    scheduleRiverLevelRetry()
   }
   finally {
     riverLevelsLoading.value = false
   }
+}
+
+function scheduleRiverLevelRetry() {
+  if (riverLevelRetryTimer) return
+  riverLevelRetryTimer = setTimeout(() => {
+    riverLevelRetryTimer = undefined
+    void syncRiverLevels(true)
+  }, riverLevelRetryDelay)
+  riverLevelRetryDelay = Math.min(riverLevelRetryDelay * 2, 60_000)
 }
 
 onMounted(() => {
@@ -138,6 +157,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('focus', refreshReportsOnFocus)
   if (reportRefreshTimer) clearInterval(reportRefreshTimer)
   if (riverLevelRefreshTimer) clearInterval(riverLevelRefreshTimer)
+  if (riverLevelRetryTimer) clearTimeout(riverLevelRetryTimer)
 })
 </script>
 

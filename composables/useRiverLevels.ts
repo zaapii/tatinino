@@ -198,7 +198,9 @@ export function useRiverLevels() {
       if (cached) {
         try {
           const parsed = JSON.parse(cached) as { cachedAt: number, readings: RiverLevelReading[] }
-          if (Date.now() - parsed.cachedAt < CACHE_DURATION_MS) return parsed.readings
+          const hasAvailableReading = parsed.readings.some(reading => !reading.error)
+          if (hasAvailableReading && Date.now() - parsed.cachedAt < CACHE_DURATION_MS) return parsed.readings
+          sessionStorage.removeItem(CACHE_KEY)
         }
         catch {
           sessionStorage.removeItem(CACHE_KEY)
@@ -214,7 +216,7 @@ export function useRiverLevels() {
     const end = apiDate(endDate)
     const readings = await Promise.all(stations.map(station => fetchStation(station, start, end)))
 
-    if (import.meta.client) {
+    if (import.meta.client && readings.some(reading => !reading.error)) {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ cachedAt: Date.now(), readings }))
     }
     return readings
