@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
+import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature, Marker } from 'maplibre-gl'
 import type { BaseMapKind, CitizenReport, MapLayerDefinition, MapPoint, MapSelection, RiverLevelReading, SatelliteScene } from '~/types/map'
 import { citizenReportCategories, citizenReportSeverities, citizenReportSeverity, type CitizenReportSeverity } from '~/utils/citizenReportCategories'
 import MapPointInfoPanel from '~/components/map/MapPointInfo.vue'
@@ -90,6 +90,8 @@ async function fetchImageryDate() {
   finally { clearTimeout(timeout) }
 }
 let reportPopup: Popup | undefined
+let garelloMarker: Marker | undefined
+let createGarelloMarker: ((element: HTMLElement) => Marker) | undefined
 let popupResizeObserver: ResizeObserver | undefined
 let createPopup: (() => Popup) | undefined
 const popupHost = shallowRef<HTMLElement | null>(null)
@@ -687,6 +689,60 @@ function reportGeoJson() {
   }
 }
 
+function garelloReport() {
+  return props.reports.find(report => report.id === garelloReportId)
+}
+
+function selectGarelloReport() {
+  const report = garelloReport()
+  if (!report) return
+  const properties = reportGeoJson().features.find(feature => feature.properties.id === report.id)?.properties
+  if (!properties) return
+  emit('pointSelected', {
+    ...report.point,
+    feature: {
+      layerId: reportSourceId,
+      layerLabel: report.topic,
+      color: garelloOrange,
+      geometryType: 'Point',
+      sourceFile: 'Registro público de reclamos ciudadanos',
+      properties,
+    },
+  })
+}
+
+function syncGarelloMarker() {
+  if (!map || !styleReady || !createGarelloMarker) return
+  const report = garelloReport()
+  if (!report) {
+    garelloMarker?.remove()
+    garelloMarker = undefined
+    return
+  }
+
+  if (!garelloMarker) {
+    const element = document.createElement('article')
+    element.className = 'garello-map-marker'
+    element.setAttribute('aria-label', 'Obra inconclusa: Terraplén Garello')
+    element.innerHTML = `
+      <span class="garello-map-marker-status">Obra inconclusa</span>
+      <strong>Terraplén Garello</strong>
+      <span class="garello-map-marker-copy">Obra de protección hídrica pendiente.</span>
+      <button type="button" style="background-color: #b73b1d;">Más información</button>
+      <i aria-hidden="true"></i>
+    `
+    element.addEventListener('click', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      selectGarelloReport()
+    })
+    garelloMarker = createGarelloMarker(element)
+      .setLngLat([report.point.longitude, report.point.latitude])
+      .addTo(map)
+  }
+  else garelloMarker.setLngLat([report.point.longitude, report.point.latitude])
+}
+
 function riverLevelGeoJson() {
   return {
     type: 'FeatureCollection' as const,
@@ -1205,9 +1261,14 @@ watch(() => props.recentSatelliteScene?.id, () => {
   if (props.baseMap === 'recent' && !props.recentSatelliteScene) return
   updateBaseMap()
 })
-watch(() => props.reportsVisible, updateReportVisibility)
+watch(() => props.reportsVisible, visible => {
+  updateReportVisibility(visible)
+})
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
-watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), updateReportData)
+watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), () => {
+  updateReportData()
+  syncGarelloMarker()
+})
 watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}:${reading.alertLevel}:${reading.evacuationLevel}`).join('|'), updateRiverLevelData)
 watch(() => props.reportLocation ? `${props.reportLocation.longitude}:${props.reportLocation.latitude}` : '', updateDraftData)
 watch(() => props.placingReport, placing => {
@@ -1230,6 +1291,7 @@ onMounted(async () => {
     className: 'citizen-report-popover',
     offset: [0, -42],
   })
+  createGarelloMarker = element => new maplibregl.Marker({ element, anchor: 'bottom', offset: [0, -16] })
   maplibregl.setWorkerUrl('/vendor/maplibre-gl-worker.mjs')
   map = new maplibregl.Map({
     container: mapElement.value,
@@ -1250,6 +1312,7 @@ onMounted(async () => {
     updateBaseVisibility(props.waterVisible)
     syncHydraulicLayers()
     addCitizenReportLayers()
+    syncGarelloMarker()
     startReportPulse()
     addRiverLevelLayers()
     updateBaseMap()
@@ -1343,6 +1406,8 @@ onBeforeUnmount(() => {
   imageryRequest?.abort()
   imageryRequest = undefined
   closeReportPopup()
+  garelloMarker?.remove()
+  garelloMarker = undefined
   styleReady = false
   resizeObserver?.disconnect()
   if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
@@ -1372,6 +1437,60 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+:global(.garello-map-marker) {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: 218px;
+  border: 2px solid #e85d32;
+  border-radius: 14px;
+  background: #fff;
+  padding: 11px 12px 12px;
+  color: #172640;
+  box-shadow: 0 10px 28px rgba(24, 46, 72, .32);
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+:global(.garello-map-marker:hover), :global(.garello-map-marker:focus-within) {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(24, 46, 72, .4);
+}
+:global(.garello-map-marker-status) {
+  color: #b73b1d;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+:global(.garello-map-marker strong) { font-size: 15px; line-height: 1.15; }
+:global(.garello-map-marker-copy) { color: #506074; font-size: 10px; line-height: 1.32; }
+:global(.garello-map-marker button) {
+  justify-self: start;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: #1a2741;
+  padding: 6px 9px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 750;
+}
+:global(.garello-map-marker i) {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 17px;
+  height: 17px;
+  border-right: 2px solid #e85d32;
+  border-bottom: 2px solid #e85d32;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+}
+@media (max-width: 639px) {
+  :global(.garello-map-marker) { width: 184px; padding: 9px 10px 10px; }
+  :global(.garello-map-marker strong) { font-size: 13px; }
+  :global(.garello-map-marker-copy) { display: none; }
+}
 :deep(.citizen-report-popover) {
   z-index: 40;
   width: min(348px, calc(100vw - 32px));

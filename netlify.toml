@@ -6,6 +6,11 @@
   NODE_VERSION = "22"
 
 [[redirects]]
+  from = "/api/meteorologia"
+  to = "/.netlify/functions/municipal-weather"
+  status = 200
+
+[[redirects]]
   from = "/"
   to = "/mapa/"
   status = 301
