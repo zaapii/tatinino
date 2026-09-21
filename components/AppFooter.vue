@@ -6,7 +6,7 @@
         <p class="ui-label mt-2 text-river">Información pública para prevenir</p>
       </div>
       <div class="mt-8 lg:mt-0">
-        <nav class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium"><NuxtLink to="/mapa">Mapa</NuxtLink><NuxtLink to="/el-nino">El Niño</NuxtLink><NuxtLink to="/el-nino#documentos">Documentos</NuxtLink><NuxtLink to="/novedades">Novedades</NuxtLink><NuxtLink to="/proyecto">Acerca del proyecto</NuxtLink></nav>
+        <nav class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium"><NuxtLink to="/mapa">Mapa</NuxtLink><NuxtLink to="/el-nino">El Niño</NuxtLink><NuxtLink to="/el-nino#documentos">Documentos</NuxtLink></nav>
         <div class="mt-6"><ShareLinks /></div>
         <p class="mt-6 max-w-3xl text-xs leading-relaxed text-ink/55">La información presentada tiene fines informativos y preventivos y no reemplaza las comunicaciones oficiales de los organismos de emergencia.</p>
       </div>
