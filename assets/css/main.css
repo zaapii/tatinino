@@ -28,6 +28,15 @@ body { margin: 0; background: var(--color-paper); }
 button, a, input { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
 
+/* iOS amplía automáticamente los controles con texto menor a 16 px al
+   enfocarlos. Conservamos el zoom accesible de la página y evitamos solo ese
+   salto de foco en dispositivos WebKit táctiles. */
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    input, select, textarea { font-size: 16px; }
+  }
+}
+
 :focus-visible {
   outline: 3px solid rgba(28, 158, 218, .32);
   outline-offset: 3px;

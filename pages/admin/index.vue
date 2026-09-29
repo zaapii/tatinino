@@ -61,6 +61,8 @@ const selectedStatus = ref<AdminReportStatusFilter>('pending')
 const neighborhoodQuery = ref('')
 const lastUpdated = ref<Date | null>(null)
 const selectedReport = ref<AdminCitizenReport | null>(null)
+const selectedReportTopic = ref('')
+const savingTopic = ref(false)
 const moderatingId = ref('')
 const actionError = ref('')
 const actionNotice = ref('')
@@ -73,6 +75,7 @@ const {
   moderateReport,
   deleteReport,
   subscribeToAdminReports,
+  updateReportTopic,
 } = useAdminReports()
 let unsubscribe: (() => void) | undefined
 let latestRequest = 0
@@ -159,6 +162,7 @@ onBeforeUnmount(() => {
 watch(selectedReport, report => {
   document.body.style.overflow = report ? 'hidden' : ''
   confirmingDelete.value = false
+  selectedReportTopic.value = report?.topic ?? ''
 })
 
 function clearFilters() {
@@ -192,7 +196,7 @@ async function reloadAfterModeration() {
 }
 
 async function setModeration(report: AdminCitizenReport, status: 'approved' | 'rejected') {
-  if (moderatingId.value || report.status === status) return
+  if (moderatingId.value || savingTopic.value || report.status === status) return
   moderatingId.value = report.id
   actionError.value = ''
   actionNotice.value = ''
@@ -213,9 +217,32 @@ async function setModeration(report: AdminCitizenReport, status: 'approved' | 'r
   }
 }
 
+async function saveReportTopic() {
+  const report = selectedReport.value
+  const topic = selectedReportTopic.value
+  if (!report || savingTopic.value || moderatingId.value || topic === report.topic) return
+
+  savingTopic.value = true
+  actionError.value = ''
+  actionNotice.value = ''
+
+  try {
+    const updated = await updateReportTopic(report.id, topic)
+    if (selectedReport.value?.id === updated.id) selectedReport.value = updated
+    actionNotice.value = 'Categoría actualizada correctamente.'
+    await reloadAfterModeration()
+  }
+  catch (error) {
+    actionError.value = error instanceof Error ? error.message : 'No se pudo cambiar la categoría.'
+  }
+  finally {
+    savingTopic.value = false
+  }
+}
+
 async function removeSelectedReport() {
   const report = selectedReport.value
-  if (!report || moderatingId.value || !confirmingDelete.value) return
+  if (!report || moderatingId.value || savingTopic.value || !confirmingDelete.value) return
   moderatingId.value = report.id
   actionError.value = ''
   actionNotice.value = ''
@@ -345,18 +372,18 @@ async function exportCsv() {
             <header class="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-7 sm:py-5"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><p class="ui-label text-river-ink">Revisión del reclamo</p><span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset" :class="STATUS_CLASSES[selectedReport.status]">{{ STATUS_LABELS[selectedReport.status] }}</span></div><h2 id="report-dialog-title" class="mt-2 text-xl font-semibold tracking-[-.035em] sm:text-2xl">{{ selectedReport.topic }}</h2></div><button class="grid size-10 shrink-0 place-items-center rounded-xl border border-ink/10 hover:bg-mist" aria-label="Cerrar detalle" @click="selectedReport = null"><X :size="19" /></button></header>
             <div class="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,.82fr)]">
               <div class="flex min-h-[260px] items-center justify-center bg-[#dfe9e8] p-4 sm:min-h-[300px] sm:p-7 lg:min-h-[520px]"><a v-if="selectedReport.photoUrl" :href="selectedReport.photoUrl" target="_blank" rel="noopener noreferrer" class="group relative block max-h-full max-w-full overflow-hidden rounded-2xl bg-ink/5 shadow-[0_16px_45px_rgba(9,34,53,.16)]"><img :src="selectedReport.photoUrl" :alt="`Foto adjunta al reclamo ${selectedReport.topic}`" class="max-h-[55dvh] w-auto max-w-full object-contain lg:max-h-[62dvh]" /><span class="absolute inset-x-3 bottom-3 rounded-xl bg-ink/82 px-3 py-2 text-center text-[10px] font-semibold text-white opacity-0 backdrop-blur transition group-hover:opacity-100">Abrir imagen original</span></a><div v-else class="text-center text-ink/38"><span class="mx-auto grid size-14 place-items-center rounded-2xl border border-ink/10 bg-white/65"><ImageIcon :size="25" /></span><p class="mt-3 text-sm font-semibold text-ink/55">Este reclamo no tiene foto</p></div></div>
-              <div class="p-5 sm:p-7"><p class="ui-label text-ink/40">Descripción enviada</p><p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink/76">{{ selectedReport.description || 'Sin descripción' }}</p><dl class="mt-6 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10"><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Barrio</dt><dd class="text-right text-xs font-semibold">{{ neighborhoodOf(selectedReport) }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Fecha</dt><dd class="text-right text-xs">{{ dateFormatter.format(new Date(selectedReport.createdAt)) }} · {{ timeFormatter.format(new Date(selectedReport.createdAt)) }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Ubicación</dt><dd class="flex items-center justify-end gap-1.5 text-right font-mono text-[10px]"><MapPin :size="13" class="text-river" /> {{ selectedReport.latitude.toFixed(6) }}, {{ selectedReport.longitude.toFixed(6) }}</dd></div><div v-if="selectedReport.photoName" class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Archivo</dt><dd class="break-all text-right font-mono text-[10px]">{{ selectedReport.photoName }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">ID</dt><dd class="break-all text-right font-mono text-[9px] text-ink/55">{{ selectedReport.id }}</dd></div></dl><section v-if="selectedReport.contact" class="mt-5 rounded-xl border border-river/20 bg-river/5 p-3"><h3 class="text-xs font-semibold">Contacto privado</h3><dl class="mt-2 space-y-2 text-xs"><div v-if="selectedReport.contact.full_name"><dt class="text-ink/45">Nombre y Apellido</dt><dd class="break-words">{{ selectedReport.contact.full_name }}</dd></div><div v-if="selectedReport.contact.phone"><dt class="text-ink/45">Teléfono</dt><dd>{{ selectedReport.contact.phone }}</dd></div><div v-if="selectedReport.contact.email"><dt class="text-ink/45">Mail</dt><dd class="break-all">{{ selectedReport.contact.email }}</dd></div></dl></section><p v-if="selectedReport.address" class="mt-4 text-xs">Dirección: {{ selectedReport.address }}</p><div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900"><strong>Antes de publicar:</strong> comprobá que la foto corresponda al reclamo y que no incluya contenido indebido o datos personales.</div></div>
+              <div class="p-5 sm:p-7"><p class="ui-label text-ink/40">Descripción enviada</p><p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink/76">{{ selectedReport.description || 'Sin descripción' }}</p><section class="mt-6 rounded-xl border border-river/20 bg-river/5 p-3"><label for="report-topic" class="ui-label text-[8px] text-river-ink">Categoría del reclamo</label><div class="mt-2 flex flex-col gap-2 sm:flex-row"><span class="relative min-w-0 flex-1"><select id="report-topic" v-model="selectedReportTopic" class="h-11 w-full appearance-none rounded-xl border border-ink/12 bg-white px-3 pr-9 text-xs font-semibold outline-none transition focus:border-river focus:ring-4 focus:ring-river/10" :disabled="savingTopic || Boolean(moderatingId)"><option v-for="topic in TOPICS" :key="topic" :value="topic">{{ topic }}</option></select><ChevronDown :size="15" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink/40" /></span><button type="button" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-river px-4 text-xs font-semibold text-white transition hover:bg-river-ink disabled:cursor-not-allowed disabled:opacity-45" :disabled="savingTopic || Boolean(moderatingId) || selectedReportTopic === selectedReport.topic" @click="saveReportTopic"><LoaderCircle v-if="savingTopic" :size="14" class="animate-spin" /><Check v-else :size="14" /> {{ savingTopic ? 'Guardando…' : 'Guardar categoría' }}</button></div><p class="mt-2 text-[10px] leading-relaxed text-ink/48">La categoría corregida se actualizará también en el mapa público si el reclamo está aprobado.</p></section><dl class="mt-6 divide-y divide-ink/8 overflow-hidden rounded-xl border border-ink/10"><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Barrio</dt><dd class="text-right text-xs font-semibold">{{ neighborhoodOf(selectedReport) }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Fecha</dt><dd class="text-right text-xs">{{ dateFormatter.format(new Date(selectedReport.createdAt)) }} · {{ timeFormatter.format(new Date(selectedReport.createdAt)) }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Ubicación</dt><dd class="flex items-center justify-end gap-1.5 text-right font-mono text-[10px]"><MapPin :size="13" class="text-river" /> {{ selectedReport.latitude.toFixed(6) }}, {{ selectedReport.longitude.toFixed(6) }}</dd></div><div v-if="selectedReport.photoName" class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">Archivo</dt><dd class="break-all text-right font-mono text-[10px]">{{ selectedReport.photoName }}</dd></div><div class="grid grid-cols-[105px_1fr] gap-3 px-3 py-3"><dt class="ui-label text-[8px] text-ink/40">ID</dt><dd class="break-all text-right font-mono text-[9px] text-ink/55">{{ selectedReport.id }}</dd></div></dl><section v-if="selectedReport.contact" class="mt-5 rounded-xl border border-river/20 bg-river/5 p-3"><h3 class="text-xs font-semibold">Contacto privado</h3><dl class="mt-2 space-y-2 text-xs"><div v-if="selectedReport.contact.full_name"><dt class="text-ink/45">Nombre y Apellido</dt><dd class="break-words">{{ selectedReport.contact.full_name }}</dd></div><div v-if="selectedReport.contact.phone"><dt class="text-ink/45">Teléfono</dt><dd>{{ selectedReport.contact.phone }}</dd></div><div v-if="selectedReport.contact.email"><dt class="text-ink/45">Mail</dt><dd class="break-all">{{ selectedReport.contact.email }}</dd></div></dl></section><p v-if="selectedReport.address" class="mt-4 text-xs">Dirección: {{ selectedReport.address }}</p><div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900"><strong>Antes de publicar:</strong> comprobá que la foto corresponda al reclamo y que no incluya contenido indebido o datos personales.</div></div>
             </div>
-            <footer class="flex shrink-0 flex-col gap-3 border-t border-ink/10 bg-[#f8faf9] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div class="min-h-5 text-xs font-semibold"><p v-if="actionNotice" role="status" class="flex items-center gap-2 text-emerald-700"><Check :size="15" /> {{ actionNotice }}</p><p v-else-if="actionError" role="alert" class="flex items-center gap-2 text-red-700"><TriangleAlert :size="15" /> {{ actionError }}</p></div><div class="flex flex-wrap justify-end gap-2"><button class="h-11 rounded-xl border border-ink/12 bg-white px-4 text-xs font-semibold hover:bg-mist" @click="selectedReport = null">Cerrar</button><button v-if="selectedReport.status !== 'rejected'" class="inline-flex h-11 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(selectedReport, 'rejected')"><Ban :size="15" /> Rechazar</button><button v-if="selectedReport.status !== 'approved'" class="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="setModeration(selectedReport, 'approved')"><LoaderCircle v-if="moderatingId === selectedReport.id" :size="15" class="animate-spin" /><Check v-else :size="15" /> Aprobar y publicar</button></div></footer>
+            <footer class="flex shrink-0 flex-col gap-3 border-t border-ink/10 bg-[#f8faf9] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div class="min-h-5 text-xs font-semibold"><p v-if="actionNotice" role="status" class="flex items-center gap-2 text-emerald-700"><Check :size="15" /> {{ actionNotice }}</p><p v-else-if="actionError" role="alert" class="flex items-center gap-2 text-red-700"><TriangleAlert :size="15" /> {{ actionError }}</p></div><div class="flex flex-wrap justify-end gap-2"><button class="h-11 rounded-xl border border-ink/12 bg-white px-4 text-xs font-semibold hover:bg-mist" @click="selectedReport = null">Cerrar</button><button v-if="selectedReport.status !== 'rejected'" class="inline-flex h-11 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50" :disabled="Boolean(moderatingId) || savingTopic" @click="setModeration(selectedReport, 'rejected')"><Ban :size="15" /> Rechazar</button><button v-if="selectedReport.status !== 'approved'" class="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" :disabled="Boolean(moderatingId) || savingTopic" @click="setModeration(selectedReport, 'approved')"><LoaderCircle v-if="moderatingId === selectedReport.id" :size="15" class="animate-spin" /><Check v-else :size="15" /> Aprobar y publicar</button></div></footer>
             <div class="shrink-0 border-t border-red-100 px-5 py-3 sm:px-7">
               <div v-if="confirmingDelete" role="alert" class="space-y-3">
                 <p class="text-xs text-red-800">¿Borrar este reclamo y sus datos de contacto definitivamente? Desaparecerá del mapa y de la administración. Esta acción no se puede deshacer.</p>
                 <div class="flex gap-2">
-                  <button class="rounded-lg bg-red-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="removeSelectedReport">{{ moderatingId ? 'Borrando…' : 'Sí, borrar reclamo' }}</button>
-                  <button class="rounded-lg border border-ink/12 px-4 py-2 text-xs disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="confirmingDelete = false">Cancelar</button>
+                  <button class="rounded-lg bg-red-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" :disabled="Boolean(moderatingId) || savingTopic" @click="removeSelectedReport">{{ moderatingId ? 'Borrando…' : 'Sí, borrar reclamo' }}</button>
+                  <button class="rounded-lg border border-ink/12 px-4 py-2 text-xs disabled:opacity-50" :disabled="Boolean(moderatingId) || savingTopic" @click="confirmingDelete = false">Cancelar</button>
                 </div>
               </div>
-              <button v-else class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="Boolean(moderatingId)" @click="confirmingDelete = true"><Trash2 :size="15" /> Borrar reclamo</button>
+              <button v-else class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="Boolean(moderatingId) || savingTopic" @click="confirmingDelete = true"><Trash2 :size="15" /> Borrar reclamo</button>
             </div>
           </section>
         </div>

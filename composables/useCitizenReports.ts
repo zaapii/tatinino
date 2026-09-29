@@ -1,4 +1,5 @@
 import { citizenReportCategories } from '~/utils/citizenReportCategories'
+import { MAX_CITIZEN_REPORT_PHOTO_SIZE_BYTES, MAX_CITIZEN_REPORT_PHOTO_SIZE_MB } from '~/utils/citizenReportPhoto'
 import { isReportPointInBounds } from '~/utils/reportLocation'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { CitizenReport, CitizenReportForm, CitizenReportStatus } from '~/types/map'
@@ -100,7 +101,7 @@ export function useCitizenReports() {
     if (form.photoFile) {
       const extension = imageExtensions[form.photoFile.type]
       if (!extension) throw new Error('La foto debe ser JPG, PNG, WebP, HEIC o HEIF.')
-      if (form.photoFile.size > 5 * 1024 * 1024) throw new Error('La foto no puede superar los 5 MB.')
+      if (form.photoFile.size > MAX_CITIZEN_REPORT_PHOTO_SIZE_BYTES) throw new Error(`La foto no puede superar los ${MAX_CITIZEN_REPORT_PHOTO_SIZE_MB} MB.`)
 
       photoPath = `public/${crypto.randomUUID()}.${extension}`
       const { error: uploadError } = await supabase.storage

@@ -7,6 +7,7 @@ import type {
   AdminReportPageRequest,
 } from '~/types/admin'
 import type { CitizenReportStatus } from '~/types/map'
+import { citizenReportCategories } from '~/utils/citizenReportCategories'
 
 type AdminCitizenReportRow = {
   id: string
@@ -162,6 +163,23 @@ export function useAdminReports() {
     return mapAdminReport(data as AdminCitizenReportRow)
   }
 
+  async function updateReportTopic(id: string, topic: string) {
+    if (!citizenReportCategories.some(category => category.topic === topic)) {
+      throw new Error('Seleccioná una categoría válida.')
+    }
+
+    const supabase = useSupabaseClient()
+    const { data, error } = await supabase
+      .from('citizen_reports')
+      .update({ topic })
+      .eq('id', id)
+      .select(ADMIN_REPORT_COLUMNS)
+      .single()
+
+    if (error) throw new Error(`No se pudo cambiar la categoría: ${error.message}`)
+    return mapAdminReport(data as AdminCitizenReportRow)
+  }
+
   async function deleteReport(id: string) {
     const supabase = useSupabaseClient()
     const { data, error } = await supabase
@@ -182,5 +200,6 @@ export function useAdminReports() {
     fetchAdminReportsPage,
     moderateReport,
     subscribeToAdminReports,
+    updateReportTopic,
   }
 }

@@ -3,6 +3,7 @@ import { Building2, Camera, CheckCircle2, LoaderCircle, LocateFixed, MapPin, Mes
 import type { CitizenReportForm, MapPoint } from '~/types/map'
 import { isReportPointInBounds } from '~/utils/reportLocation'
 import { citizenReportCategories } from '~/utils/citizenReportCategories'
+import { MAX_CITIZEN_REPORT_PHOTO_SIZE_BYTES, MAX_CITIZEN_REPORT_PHOTO_SIZE_MB } from '~/utils/citizenReportPhoto'
 
 const props = defineProps<{
   hideTrigger?: boolean
@@ -128,15 +129,17 @@ watch(
 )
 
 function choosePhoto(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
+  input.value = ''
   submitError.value = ''
   if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(file.type)) {
     submitError.value = 'La foto debe ser JPG, PNG, WebP, HEIC o HEIF.'
     return
   }
-  if (file.size > 5 * 1024 * 1024) {
-    submitError.value = 'La foto no puede superar los 5 MB.'
+  if (file.size > MAX_CITIZEN_REPORT_PHOTO_SIZE_BYTES) {
+    submitError.value = `La foto no puede superar los ${MAX_CITIZEN_REPORT_PHOTO_SIZE_MB} MB.`
     return
   }
   if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
@@ -234,14 +237,23 @@ onBeforeUnmount(() => {
 
           <div>
             <p class="ui-label text-[9px] text-ink/50">2. Foto · Obligatoria</p>
-            <label class="mt-1.5 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-ink/18 px-3 py-3 transition hover:border-river/50 hover:bg-river/3">
+            <div class="mt-1.5 flex items-center gap-3 rounded-xl border border-dashed border-ink/18 px-3 py-3">
               <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-mist text-river">
                 <img v-if="photoPreview" :src="photoPreview" class="h-full w-full object-cover" alt="Vista previa de la foto"/>
                 <Camera v-else :size="17"/>
               </span>
-              <span class="min-w-0"><span class="block truncate text-xs font-semibold">{{ photoName || 'Adjuntar una foto' }}</span><span class="mt-0.5 block text-[10px] text-ink/42">JPG, PNG, WebP, HEIC o HEIF · máximo 5 MB</span></span>
-              <input type="file" aria-label="Foto del reclamo (obligatoria)" aria-required="true" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="sr-only" @change="choosePhoto">
-            </label>
+              <span class="min-w-0"><span class="block truncate text-xs font-semibold">{{ photoName || 'Adjuntar una foto' }}</span><span class="mt-0.5 block text-[10px] text-ink/42">JPG, PNG, WebP, HEIC o HEIF · máximo {{ MAX_CITIZEN_REPORT_PHOTO_SIZE_MB }} MB</span></span>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <label class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-river/25 bg-river/6 px-3 py-2.5 text-[11px] font-semibold text-river transition hover:bg-river/10">
+                <Camera :size="15"/> Sacar foto
+                <input type="file" aria-label="Sacar una foto del reclamo" aria-required="true" accept="image/*" capture="environment" class="sr-only" @change="choosePhoto">
+              </label>
+              <label class="flex cursor-pointer items-center justify-center rounded-xl border border-ink/14 px-3 py-2.5 text-[11px] font-semibold text-ink/65 transition hover:bg-mist">
+                Elegir de galería
+                <input type="file" aria-label="Elegir una foto del reclamo de la galería" aria-required="true" accept="image/*" class="sr-only" @change="choosePhoto">
+              </label>
+            </div>
           </div>
 
           <label class="block">
