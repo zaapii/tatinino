@@ -1274,10 +1274,29 @@ watch(() => props.reportsVisible, visible => {
   updateReportVisibility(visible)
 })
 watch(() => props.riverLevelsVisible, updateRiverLevelVisibility)
-watch(() => props.reports.map(report => `${report.id}:${report.point.longitude}:${report.point.latitude}`).join('|'), () => {
+// Category and detail changes must refresh MapLibre even when coordinates stay the same.
+watch(reportGeoJson, (data) => {
   updateReportData()
   syncGarelloMarker()
-})
+
+  const selected = props.selectedReport
+  if (!selected || selected.feature?.layerId !== reportSourceId) return
+  const feature = data.features.find(item => item.properties.id === selected.feature?.properties.id)
+  if (!feature) {
+    emit('selectionClosed')
+    return
+  }
+  emit('pointSelected', {
+    longitude: feature.geometry.coordinates[0]!,
+    latitude: feature.geometry.coordinates[1]!,
+    feature: {
+      ...selected.feature,
+      layerLabel: feature.properties.topic,
+      color: feature.properties.markerColor,
+      properties: feature.properties,
+    },
+  })
+}, { deep: true })
 watch(() => props.riverLevels.map(reading => `${reading.id}:${reading.level}:${reading.observedAt}:${reading.isStale}:${reading.alertLevel}:${reading.evacuationLevel}`).join('|'), updateRiverLevelData)
 watch(() => props.reportLocation ? `${props.reportLocation.longitude}:${props.reportLocation.latitude}` : '', updateDraftData)
 watch(() => props.placingReport, placing => {
