@@ -29,7 +29,7 @@ export const citizenReportCategories: CitizenReportCategory[] = [
   },
   {
     "topic": "Calle inundada",
-    "severity": "grave",
+    "severity": "medio",
     "description": "Calle, esquina o sector donde se acumula agua luego de lluvias o donde el agua permanece sin escurrir durante un tiempo."
   },
   {
