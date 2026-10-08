@@ -8,6 +8,7 @@ const baseMap = defineModel<BaseMapKind>('baseMap', { default: 'simple' })
 const reportTopics = defineModel<string[]>('reportTopics', { default: () => [...reportDesignOrder] })
 const expandedInfoId = ref<string | null>(null)
 const reportsExpanded = ref(true)
+const neighborhoodsExpanded = ref(true)
 const order = ['citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
 const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)))
 // La opción Copernicus queda oculta hasta que se retire su integración.
@@ -37,10 +38,17 @@ const baseMapOptions = [
             </span>
             <span class="layer-label">{{ layer.label }} <span v-if="layer.id === 'citizen-reports'" class="report-count">{{ props.reportCount ?? 0 }}</span></span>
             <button v-if="layer.id === 'citizen-reports'" class="layer-info" :aria-expanded="reportsExpanded" aria-label="Categorías de reclamos" @click="reportsExpanded = !reportsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !reportsExpanded }" /></button>
+            <button v-else-if="layer.children" class="layer-info" :aria-expanded="neighborhoodsExpanded" aria-label="Grupos de Barrios RENABAP" @click="neighborhoodsExpanded = !neighborhoodsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !neighborhoodsExpanded }" /></button>
             <button v-else-if="layer.id !== 'water'" class="layer-info" :aria-expanded="expandedInfoId === layer.id" :aria-label="`Información sobre ${layer.label}`" @click="expandedInfoId = expandedInfoId === layer.id ? null : layer.id"><img src="/figma/info.svg" width="15" height="15" alt="" /></button>
           </div>
           <div v-if="layer.id === 'citizen-reports' && reportsExpanded" class="report-categories">
             <label v-for="topic in reportDesignOrder" :key="topic"><input v-model="reportTopics" type="checkbox" :value="topic" :disabled="!layer.enabled" /><MapReportDesignIcon :topic="topic"/><span>{{ topic === 'Desague tapado' ? 'Desagüe tapado' : topic }}</span></label>
+          </div>
+          <div v-if="layer.children && neighborhoodsExpanded" class="neighborhood-categories">
+            <div v-for="child in layer.children" :key="child.id" class="neighborhood-category">
+              <label><input type="checkbox" :checked="child.enabled" :disabled="!layer.enabled" @change="emit('toggle', child.id)" /><span class="neighborhood-preview" :style="{ backgroundColor: child.source?.color, opacity: child.source?.fillOpacity, borderColor: child.source?.color }" aria-hidden="true" /><span>{{ child.label }}</span></label>
+              <MapCisurSource v-if="child.id === 'renabap-hydric-risk'" class="neighborhood-source" />
+            </div>
           </div>
           <p v-if="expandedInfoId === layer.id" class="layer-description">{{ layer.description }}</p>
         </div>
@@ -72,7 +80,7 @@ const baseMapOptions = [
 .layer-preview.defenses { height: 8px; background: #ba6a47; }
 .layer-preview.reservoirs { height: 16px; background: #91b5c3; border: 1px solid #2f82a2; }
 .layer-preview.channels { height: 8px; background: #198c8e; }
-.layer-preview.renabap-neighborhoods { height: 16px; background: #cf9cb0; }
+.layer-preview.renabap-neighborhoods { height: 16px; background: linear-gradient(90deg, #c43d3873 50%, #555b6347 50%); }
 .layer-preview.pumping::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #dda52d; }
 .layer-preview.basins { height: 16px; border: 1.5px dashed #4b6d89; }
 .layer-preview.sub-basins { height: 16px; border: .7px dashed #4b6d89; }
@@ -81,6 +89,13 @@ const baseMapOptions = [
 .report-categories label { display: flex; align-items: center; gap: 6px; min-height: 31px; font-size: 12px; line-height: 16px; cursor: pointer; }
 .report-categories input { width: 12px; height: 12px; flex-shrink: 0; accent-color: #1a2741; }
 .report-categories label:has(:disabled) { opacity: .5; }
+.neighborhood-categories { padding: 0 12px 14px 45px; }
+.neighborhood-category + .neighborhood-category { margin-top: 8px; }
+.neighborhood-category label { display: flex; align-items: center; gap: 6px; min-height: 31px; font-size: 12px; line-height: 16px; cursor: pointer; }
+.neighborhood-category input { width: 12px; height: 12px; flex-shrink: 0; accent-color: #1a2741; }
+.neighborhood-category label:has(:disabled) { opacity: .5; }
+.neighborhood-preview { width: 17px; height: 13px; flex-shrink: 0; border: 1px solid; }
+.neighborhood-source { margin: 4px 0 8px 18px; }
 .layer-description { margin: 0 10px 12px 45px; font-size: 11px; line-height: 17px; }
 @media (max-width: 639px) { .layers-panel { width: 100%; } }
 </style>

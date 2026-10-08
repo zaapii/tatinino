@@ -18,8 +18,17 @@ export function useMapLayers() {
       source: { file: 'canales.geojson', dataUrl: '/data/hydraulics/canales.geojson', featureCount: 90, color: '#198c8e', minZoom: 10.5, lineWidth: 4.2 },
     },
     {
-      id: 'renabap-neighborhoods', label: 'Barrios RENABAP', description: '69 polígonos de barrios populares de la localidad de Santa Fe; incluye la cantidad de familias informada en el archivo fuente', enabled: false, status: 'available', group: 'territory',
-      source: { file: 'barrios_renabap.geojson', dataUrl: '/data/territory/barrios_renabap.geojson', featureCount: 69, color: '#cf9cb0', minZoom: 9.5, lineWidth: 1.7, fillOpacity: 0.5, labelProperty: 'barrio', labelMinZoom: 11.5 },
+      id: 'renabap-neighborhoods', label: 'Barrios RENABAP', description: 'Barrios populares divididos según los archivos de riesgo hídrico de CISUR y otros barrios; incluye las familias informadas en cada fuente.', enabled: true, status: 'available', group: 'territory',
+      children: [
+        {
+          id: 'renabap-hydric-risk', label: 'Barrios en Riesgo Hídrico (CISUR)', description: '57 registros de barrios populares en riesgo hídrico según CISUR.', enabled: true, status: 'available', group: 'territory',
+          source: { file: 'barrios_riesgo_hidrico_cisur.geojson', dataUrl: '/data/territory/barrios_riesgo_hidrico_cisur.geojson', featureCount: 57, color: '#c43d38', minZoom: 9.5, lineWidth: 1.7, fillOpacity: 0.45, labelProperty: 'barrio', labelMinZoom: 11.5 },
+        },
+        {
+          id: 'renabap-other', label: 'Otros Barrios', description: '15 registros de otros barrios populares del archivo provisto.', enabled: false, status: 'available', group: 'territory',
+          source: { file: 'otros_barrios.geojson', dataUrl: '/data/territory/otros_barrios.geojson', featureCount: 15, color: '#555b63', minZoom: 9.5, lineWidth: 1.7, fillOpacity: 0.28, labelProperty: 'barrio', labelMinZoom: 11.5 },
+        },
+      ],
     },
     {
       id: 'pumping', label: 'Estaciones de bombeo', description: 'Estaciones, rebombeos y puntos sin obra civil', enabled: false, status: 'available', group: 'protection',
@@ -36,9 +45,15 @@ export function useMapLayers() {
   ])
 
   function toggleLayer(id: string) {
-    const layer = layers.value.find(item => item.id === id)
+    const layer = layers.value.flatMap(item => [item, ...(item.children ?? [])]).find(item => item.id === id)
     if (layer && layer.status !== 'soon') layer.enabled = !layer.enabled
   }
 
-  return { layers, toggleLayer }
+  // Keep subgroup choices when the parent layer is hidden and shown again.
+  const mapLayers = computed(() => layers.value.flatMap(layer => [
+    layer,
+    ...(layer.children ?? []).map(child => ({ ...child, enabled: layer.enabled && child.enabled })),
+  ]))
+
+  return { layers, mapLayers, toggleLayer }
 }

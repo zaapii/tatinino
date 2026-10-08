@@ -14,7 +14,7 @@ useSeoMeta({
   twitterDescription: 'Mapa del Agua de Santa Fe: niveles de los ríos, riesgo hídrico y reclamos vecinales.',
 })
 
-const { layers, toggleLayer } = useMapLayers()
+const { layers, mapLayers, toggleLayer } = useMapLayers()
 const selectedPoint = ref<MapSelection | null>(null)
 const layersOpen = ref(false)
 const baseMap = ref<BaseMapKind>('simple')
@@ -174,7 +174,7 @@ onBeforeUnmount(() => {
         :base-map="baseMap"
         :recent-satellite-scene="null"
         :water-visible="waterVisible"
-        :layers="layers"
+        :layers="mapLayers"
         :reports="filteredReports"
         :reports-visible="reportsVisible"
         :river-levels="riverLevels"

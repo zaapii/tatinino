@@ -109,6 +109,7 @@ export type MapLayerDefinition = {
   group: LayerGroup
   source?: HydraulicLayerSource
   color?: string
+  children?: MapLayerDefinition[]
 }
 
 export type GeospatialSourceConfig = {

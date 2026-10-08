@@ -8,7 +8,8 @@ defineEmits<{
 }>()
 const isCitizenReport = computed(() => props.point.feature?.layerId === 'citizen-reports')
 const isGraveReport = computed(() => isCitizenReport.value && props.point.feature?.properties.severity === 'grave')
-const isRenabapNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-neighborhoods')
+const isRenabapNeighborhood = computed(() => props.point.feature?.layerId.startsWith('renabap-') ?? false)
+const isCisurNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-hydric-risk')
 const isRiverLevel = computed(() => props.point.feature?.layerId === 'river-levels')
 const isRiverReference = computed(() => isRiverLevel.value && props.point.feature?.properties.isRiverReference === true)
 const isNamedInfrastructure = computed(() => ['reservoirs', 'channels', 'pumping'].includes(props.point.feature?.layerId ?? ''))
@@ -49,6 +50,7 @@ const propertyLabels: Record<string, string> = {
   localidad: 'Localidad',
   departamento: 'Departamento',
   provincia: 'Provincia',
+  situacion: 'Situación según CISUR',
   stationName: 'Estación',
   levelLabel: 'Altura',
   observedAtLabel: 'Medición',
@@ -68,7 +70,7 @@ const detailRows = computed(() => {
     : isRiverLevel.value
       ? ['stationName', 'levelLabel', 'observedAtLabel', 'trendLabel', 'riverStatusLabel', 'lowWaterLevelLabel', 'alertLevelLabel', 'evacuationLevelLabel', 'sourceName']
     : isRenabapNeighborhood.value
-      ? ['barrio', 'familias', 'renabap_id', 'localidad', 'departamento', 'provincia']
+      ? ['barrio', 'situacion', 'familias', 'renabap_id', 'localidad', 'departamento', 'provincia']
       : isNamedInfrastructure.value
         ? ['description']
         : ['display_value', 'text', 'classification', 'layer', 'entity_type', 'handle', 'radius_m_drawing_units']
@@ -155,6 +157,7 @@ function detailValueClass(key: string) {
     </div>
 
 
-    <p v-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Barrios RENABAP.csv”, convertido a GeoJSON sin modificar sus coordenadas WGS84 ni sus atributos principales.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
+    <MapCisurSource v-if="isCisurNeighborhood" class="mt-3" />
+    <p v-else-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Otros Barrios.kmz.zip”, convertido a GeoJSON conservando sus coordenadas y atributos.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>
 </template>

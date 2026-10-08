@@ -631,7 +631,7 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
         'text-max-width': 12,
       },
       paint: {
-        'text-color': '#62263f',
+        'text-color': source.color,
         'text-halo-color': 'rgba(255, 255, 255, 0.96)',
         'text-halo-width': 1.5,
       },
@@ -1254,7 +1254,7 @@ function featureInfo(feature: MapGeoJSONFeature) {
 
   return {
     layerId,
-    layerLabel: layerId === 'renabap-neighborhoods' ? String(properties.barrio ?? definition.label) : definition.label,
+    layerLabel: layerId.startsWith('renabap-') ? String(properties.barrio ?? definition.label) : definition.label,
     color: definition.source.color,
     geometryType: feature.geometry.type,
     sourceFile: definition.source.dataUrl ?? definition.source.file,
