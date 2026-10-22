@@ -136,6 +136,10 @@ onBeforeUnmount(() => riverObserver?.disconnect())
           <strong>+1700</strong>
           <span><b>Familias</b> viven en zonas de riesgo hídrico</span>
         </div>
+        <div class="headline-metric">
+          <strong>+20.000</strong>
+          <span><b>Familias</b> en barrios en riesgo hidrico (CISUR)</span>
+        </div>
         <div class="headline-metric reports-metric">
           <strong v-if="!reportsLoading">+{{ reportCount }}</strong>
           <LoaderCircle v-else :size="28" class="animate-spin" />
