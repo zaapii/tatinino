@@ -1194,12 +1194,14 @@ function selectableFeaturesAt(point: { x: number; y: number }) {
 
 function preferredSelectableFeature(point: { x: number; y: number }) {
   const features = selectableFeaturesAt(point)
+  const report = features.find(feature => feature.source === reportSourceId)
+  if (report) return report
+
   const hydraulic = features.find(feature => feature.source.startsWith('hydraulic-'))
   if (hydraulic) return hydraulic
 
   const special = features.find(feature =>
-    feature.source === reportSourceId
-    || feature.source === riverLevelSourceId
+    feature.source === riverLevelSourceId
     || feature.layer.id === riverLevelReferenceLayerId,
   )
   return special ?? features[0]
@@ -1391,7 +1393,8 @@ onMounted(async () => {
     }
 
     const feature = preferredSelectableFeature(event.point)
-    if (feature) {
+    const report = feature?.source === reportSourceId ? undefined : reportNear(event.point)
+    if (!report && feature) {
       const featureCoordinates = feature.geometry.type === 'Point'
         ? feature.geometry.coordinates
         : null
@@ -1403,7 +1406,6 @@ onMounted(async () => {
       return
     }
 
-    const report = reportNear(event.point)
     if (!report) return
     emit('pointSelected', {
       ...report.point,
