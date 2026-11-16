@@ -13,14 +13,10 @@ const props = defineProps<{
   riverLevelsLoading: boolean
 }>()
 
-const visibleRiverIds = ref<Set<string>>(new Set())
 const weather = ref<WeatherForecast | null>(null)
 const weatherLoading = ref(true)
 const weatherError = ref('')
 const { fetchForecast } = useWeatherForecast()
-let riverObserver: IntersectionObserver | undefined
-let reduceMotion = false
-const riverElements = new Map<string, HTMLElement>()
 
 const reportBreakdown = computed(() => citizenReportCategories
   .map((category, index) => ({
@@ -36,52 +32,6 @@ const orderedRivers = computed(() => {
   const priority = (id: string) => { const index = order.indexOf(id); return index === -1 ? order.length : index }
   return [...props.riverLevels].sort((a, b) => priority(a.id) - priority(b.id)).slice(0, 5)
 })
-
-function riverLabel(reading: RiverLevelReading) {
-  const labels: Record<string, string> = {
-    'salado-santo-tome': 'Salado - Santo Tomé',
-    'colastine-rn-168': 'Colastiné',
-    'santa-fe': 'Santa Fe',
-    parana: 'Paraná',
-    'salado-recreo': 'Salado - Recreo',
-  }
-  return labels[reading.id] ?? reading.stationName
-}
-
-function formatLevel(value: number | null) {
-  return value === null ? '—' : value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function riverStyle(reading: RiverLevelReading, index: number) {
-  const maximum = Math.max(1, reading.level ?? 0, reading.alertLevel ?? 0, reading.evacuationLevel ?? 0) * 1.2
-  const position = (value: number | null) => `${Math.max(0, Math.min(100, (value ?? 0) / maximum * 100))}%`
-  return {
-    '--level': position(reading.level),
-    '--alert-position': position(reading.alertLevel),
-    '--evacuation-position': position(reading.evacuationLevel),
-    '--delay': `${index * 140}ms`,
-  }
-}
-
-function thresholdLabel(reading: RiverLevelReading, value: number | null) {
-  if (!reading.thresholdsLoaded) return 'dato no disponible'
-  return value === null ? 'sin umbral publicado' : `${formatLevel(value)} m`
-}
-
-function registerRiverRow(element: unknown, id: string) {
-  const previousElement = riverElements.get(id)
-  if (element === previousElement) return
-  if (previousElement) riverObserver?.unobserve(previousElement)
-  if (!(element instanceof HTMLElement)) {
-    riverElements.delete(id)
-    return
-  }
-  element.dataset.riverId = id
-  riverElements.set(id, element)
-  if (visibleRiverIds.value.has(id)) return
-  if (reduceMotion) visibleRiverIds.value = new Set([...visibleRiverIds.value, id])
-  else riverObserver?.observe(element)
-}
 
 function weatherEmoji(code: number) {
   if (code === 0) return '☀️'
@@ -111,22 +61,7 @@ async function loadWeather() {
   finally { weatherLoading.value = false }
 }
 
-onMounted(() => {
-  void loadWeather()
-  reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (reduceMotion) return
-  riverObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (!entry.isIntersecting) continue
-      const id = (entry.target as HTMLElement).dataset.riverId
-      if (id) visibleRiverIds.value = new Set([...visibleRiverIds.value, id])
-      riverObserver?.unobserve(entry.target)
-    }
-  }, { threshold: .55 })
-  riverElements.forEach(element => riverObserver?.observe(element))
-})
-
-onBeforeUnmount(() => riverObserver?.disconnect())
+onMounted(loadWeather)
 </script>
 
 <template>
@@ -137,27 +72,24 @@ onBeforeUnmount(() => riverObserver?.disconnect())
         <p class="impact-intro">Últimas mediciones y pronósticos hidrométricos del INA.</p>
 
         <RiverLevelTable :readings="orderedRivers" :loading="riverLevelsLoading" />
+      </section>
 
-        <div v-if="riverLevelsLoading && !orderedRivers.length" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Consultando estaciones…</div>
-        <div v-else class="river-list">
-          <article v-for="(reading, index) in orderedRivers" :key="reading.id" :ref="element => registerRiverRow(element, reading.id)" class="river-row" :class="!reading.isStale ? reading.status : undefined">
-            <div class="river-heading">
-              <div>
-                <h3>{{ riverLabel(reading) }}</h3>
-                <span v-if="reading.isStale && reading.level !== null" class="river-state">Medición con demora</span>
-                <span v-else-if="reading.status === 'alert'" class="river-state">En alerta</span>
-                <span v-else-if="reading.status === 'evacuation'" class="river-state">Nivel de evacuación</span>
-              </div>
-              <strong>{{ reading.level === null ? 'Sin dato' : `${formatLevel(reading.level)} m` }}</strong>
-            </div>
-            <div class="river-track" :class="{ animated: visibleRiverIds.has(reading.id) && reading.level !== null }" :style="riverStyle(reading, index)">
-              <div v-if="reading.level !== null" class="river-progress"><i /></div>
-              <i v-if="reading.alertLevel !== null" class="reference alert" />
-              <i v-if="reading.evacuationLevel !== null" class="reference evacuation" />
-            </div>
-            <div class="river-labels"><span>0 m</span><span>Alerta: {{ thresholdLabel(reading, reading.alertLevel) }}</span><span>Evacuación: {{ thresholdLabel(reading, reading.evacuationLevel) }}</span></div>
+      <section class="impact-block forecast-block">
+        <h2 class="impact-title">Pronóstico</h2>
+        <p class="data-note">Datos: Open-Meteo</p>
+
+        <div v-if="weather" class="forecast-strip">
+          <article v-for="(day, index) in weather.days.slice(0, 6)" :key="day.date" class="forecast-day" :class="{ today: index === 0 }">
+            <h3>{{ dayLabel(day.date, index) }}</h3>
+            <time :datetime="day.date">{{ shortDate(day.date) }}</time>
+            <span class="forecast-icon" aria-hidden="true">{{ weatherEmoji(day.weatherCode) }}</span>
+            <p class="temperatures"><strong>{{ Math.round(day.temperatureMax) }}°</strong> / <b>{{ Math.round(day.temperatureMin) }}°</b></p>
+            <p class="rain">{{ day.precipitationProbability }}% lluvia</p>
+            <p class="wind">↘ {{ Math.round(8 + day.precipitation * 3) }} - {{ Math.round(23 + day.precipitation * 4) }} km/h</p>
           </article>
         </div>
+        <div v-else-if="weatherLoading" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Preparando el pronóstico…</div>
+        <div v-else class="weather-error"><span>{{ weatherError }}</span><button @click="loadWeather"><RefreshCw :size="14" /> Reintentar</button></div>
       </section>
 
       <section class="impact-block city-impact">
@@ -198,24 +130,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
         </article>
       </section>
 
-      <section class="impact-block forecast-block">
-        <h2 class="impact-title">Pronóstico</h2>
-        <p class="data-note">Datos: Open-Meteo</p>
-
-        <div v-if="weather" class="forecast-strip">
-          <article v-for="(day, index) in weather.days.slice(0, 6)" :key="day.date" class="forecast-day" :class="{ today: index === 0 }">
-            <h3>{{ dayLabel(day.date, index) }}</h3>
-            <time :datetime="day.date">{{ shortDate(day.date) }}</time>
-            <span class="forecast-icon" aria-hidden="true">{{ weatherEmoji(day.weatherCode) }}</span>
-            <p class="temperatures"><strong>{{ Math.round(day.temperatureMax) }}°</strong> / <b>{{ Math.round(day.temperatureMin) }}°</b></p>
-            <p class="rain">{{ day.precipitationProbability }}% lluvia</p>
-            <p class="wind">↘ {{ Math.round(8 + day.precipitation * 3) }} - {{ Math.round(23 + day.precipitation * 4) }} km/h</p>
-          </article>
-        </div>
-        <div v-else-if="weatherLoading" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Preparando el pronóstico…</div>
-        <div v-else class="weather-error"><span>{{ weatherError }}</span><button @click="loadWeather"><RefreshCw :size="14" /> Reintentar</button></div>
-      </section>
-
       <footer class="impact-footer">
         <ShareLinks />
       </footer>
@@ -245,25 +159,7 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .garello-location { margin-top: 3px; color: #c9d2e2; font-size: 12px; }
 .garello-description { max-width: 47ch; margin-top: 16px; font-size: 13px; line-height: 1.55; color: #d9e2ed; }
 .data-note { margin-top: 10px; color: rgba(255,255,255,.36); font-size: 10px; }
-.river-list { margin-top: 31px; }
-.river-row { padding: 23px 0 28px; border-top: 1px solid rgba(255,255,255,.12); }
-.river-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
-.river-heading h3 { font-size: 12px; font-weight: 700; }
-.river-heading strong { color: var(--river-accent, #fff); font-size: 23px; letter-spacing: -.025em; }
 .rivers-block { scroll-margin-top: 24px; }
-.river-row.alert { --river-accent: #ffcc6e; --river-state-background: #573916; }
-.river-row.evacuation { --river-accent: #ffa3a8; --river-state-background: #71252e; }
-.river-state { display: inline-block; margin-top: 6px; border-radius: 4px; padding: 3px 6px; background: var(--river-state-background, #273754); color: var(--river-accent, #c5d2e6); font-size: 11px; font-weight: 700; }
-.river-track { --level: 0%; --alert-position: 0%; --evacuation-position: 0%; --delay: 0ms; position: relative; height: 8px; margin-top: 24px; border-radius: 999px; background: #4c5875; }
-.river-progress { position: absolute; z-index: 2; left: 0; top: 0; width: 0; height: 8px; border-radius: inherit; background: #52617e; }
-.river-progress i { position: absolute; right: -5px; top: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--river-accent, #63b5e7); box-shadow: 0 0 11px var(--river-accent, #63b5e76b); }
-.river-track.animated .river-progress { animation: river-rise 1.2s cubic-bezier(.22,.72,.2,1) var(--delay) forwards; }
-.reference { position: absolute; z-index: 1; top: -2px; width: 12px; height: 12px; border-radius: 50%; filter: blur(1px); opacity: .58; }
-.reference.alert { left: var(--alert-position); background: #eebf48; box-shadow: 0 0 13px #eebf48; }
-.reference.evacuation { left: var(--evacuation-position); background: #ee3d48; box-shadow: 0 0 13px #ee3d48; }
-.river-labels { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 13px; font-size: 9px; color: rgba(255,255,255,.78); }
-.river-labels span:nth-child(2) { text-align: center; }
-.river-labels span:last-child { text-align: right; }
 .forecast-strip { display: grid; grid-template-columns: repeat(6, 1fr); overflow: hidden; margin-top: 19px; border: 6px solid #fff; border-radius: 8px; background: #fff; color: #1a2741; box-shadow: 0 3px 7px rgba(0,0,0,.22); }
 .forecast-day { display: flex; min-width: 0; flex-direction: column; align-items: center; min-height: 216px; border-right: 1px solid #d7dce5; padding: 11px 5px 9px; text-align: center; }
 .forecast-day:last-child { border-right: 0; }
@@ -280,7 +176,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .weather-error { display: flex; align-items: center; gap: 12px; margin-top: 20px; color: rgba(255,255,255,.65); font-size: 12px; }
 .weather-error button { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 7px 10px; cursor: pointer; }
 .impact-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 90px; border-top: 1px solid rgba(255,255,255,.18); padding: 35px 0 0; }
-@keyframes river-rise { to { width: var(--level); } }
 @media (max-width: 700px) {
   .impact-section { padding: 64px 22px 38px; }
   .impact-block + .impact-block { margin-top: 64px; }
@@ -289,15 +184,10 @@ onBeforeUnmount(() => riverObserver?.disconnect())
   .headline-metric > span { font-size: 11px; }
   .report-list { width: calc(100% - 24px); }
   .report-row { grid-template-columns: 23px 1fr 32px; font-size: 10px; }
-  .river-heading strong { font-size: 20px; }
-  .river-labels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; font-size: 10px; }
-  .river-labels span { min-width: 0; overflow-wrap: anywhere; }
-  .river-labels span:first-child { grid-column: 1 / -1; }
-  .river-labels span:nth-child(2) { text-align: left; }
+
   .forecast-strip { grid-template-columns: repeat(3, 1fr); }
   .forecast-day:nth-child(3) { border-right: 0; }
   .forecast-day:nth-child(-n+3) { border-bottom: 1px solid #d7dce5; }
   .impact-footer { align-items: flex-start; flex-direction: column; margin-top: 70px; }
 }
-@media (prefers-reduced-motion: reduce) { .river-track.animated .river-progress { width: var(--level); animation: none; } }
 </style>

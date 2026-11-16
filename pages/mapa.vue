@@ -15,6 +15,7 @@ useSeoMeta({
 })
 
 const { layers, mapLayers, toggleLayer } = useMapLayers()
+const mapSection = shallowRef<HTMLElement | null>(null)
 const selectedPoint = ref<MapSelection | null>(null)
 const layersOpen = ref(false)
 const baseMap = ref<BaseMapKind>('simple')
@@ -23,6 +24,7 @@ const infoOpen = ref(false)
 const mapReady = ref(false)
 const loadingLayerCount = ref(0)
 const layerError = ref('')
+const meetingPointsNoticeOpen = ref(true)
 const reportsError = ref('')
 const reportsLoading = ref(true)
 const riverLevelsError = ref('')
@@ -45,8 +47,39 @@ const waterVisible = computed(() => layers.value.find(layer => layer.id === 'wat
 const reportsVisible = computed(() => layers.value.find(layer => layer.id === 'citizen-reports')?.enabled ?? true)
 const riverLevelsVisible = computed(() => layers.value.find(layer => layer.id === 'river-levels')?.enabled ?? true)
 
-watch(layersOpen, (open) => { if (open) reportOpen.value = false })
-watch(reportOpen, (open) => { if (open) layersOpen.value = false })
+watch(layersOpen, (open) => {
+  if (!open) return
+  reportOpen.value = false
+  fitMapInViewport()
+})
+watch(reportOpen, (open) => {
+  if (!open) return
+  layersOpen.value = false
+  fitMapInViewport()
+})
+
+function fitMapInViewport() {
+  const section = mapSection.value
+  if (!section) return
+  const top = Number.parseFloat(getComputedStyle(section).scrollMarginTop)
+  if (Math.abs(section.getBoundingClientRect().top - top) > 1) {
+    section.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }
+}
+
+function selectMapPoint(point: MapSelection) {
+  const previous = selectedPoint.value
+  selectedPoint.value = point
+  if (previous?.longitude !== point.longitude || previous.latitude !== point.latitude
+    || previous.feature?.layerId !== point.feature?.layerId) {
+    fitMapInViewport()
+  }
+}
+
+function toggleMapLayer(id: string) {
+  toggleLayer(id)
+  if (id === 'meeting-points' && selectedPoint.value?.feature?.layerId === id) selectedPoint.value = null
+}
 
 function requestReportLocation() {
   placingReport.value = true
@@ -163,73 +196,85 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-  <section
-    class="relative z-20 h-dvh overflow-visible bg-[#dfe9e8] lg:h-[915px]"
-    aria-label="Mapa interactivo"
-  >
-    <ClientOnly>
-      <MapViewerClient
-        :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen ? selectedPoint : null"
-        @selection-closed="selectedPoint = null"
-        :base-map="baseMap"
-        :recent-satellite-scene="null"
-        :water-visible="waterVisible"
-        :layers="mapLayers"
-        :reports="filteredReports"
-        :reports-visible="reportsVisible"
-        :river-levels="riverLevels"
-        :river-levels-visible="riverLevelsVisible"
-        :placing-report="placingReport"
-        :report-location="reportLocation"
-        @ready="mapReady = true"
-        @loading-change="loadingLayerCount = $event"
-        @layer-error="layerError = $event"
-        @point-selected="selectedPoint = $event"
-        @report-location-selected="setReportLocation"
-      />
-      <template #fallback><div class="h-full w-full animate-pulse bg-[#dfe9e8]" /></template>
-    </ClientOnly>
+  <section ref="mapSection" class="flex h-[calc(100dvh-var(--map-nav-height))] scroll-mt-[var(--map-nav-height)] flex-col [--map-nav-height:4rem] lg:[--map-nav-height:0px]" aria-label="Mapa interactivo">
+    <div class="sticky top-[var(--map-nav-height)] z-30 shrink-0">
+      <div v-if="meetingPointsNoticeOpen" class="flex items-center gap-3 border-y border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-950 sm:px-5">
+        <img src="/figma/meeting-point-marker.png" width="28" height="28" alt="" class="shrink-0" />
+        <div role="status" class="min-w-0 flex-1 text-sm">
+          <p class="font-bold">Agregamos los Puntos de Encuentro al mapa</p>
+          <p class="mt-0.5 text-xs text-emerald-900">Tocá un punto verde para ver su nombre y dirección.</p>
+        </div>
+        <button type="button" aria-label="Cerrar aviso de Puntos de Encuentro" class="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-emerald-800 hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700" @click="meetingPointsNoticeOpen = false">
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </div>
+      <div v-if="!placingReport" class="map-actions flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-5">
+        <button class="map-action layers-action" :aria-expanded="layersOpen" @click="layersOpen = !layersOpen"><img src="/figma/layers.svg" width="29" height="29" alt="" />Capas</button>
+        <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
+      </div>
 
-    <div v-if="!mapReady" class="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#e8f0ef]">
-      <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold shadow-sm"><Radio :size="15" class="animate-pulse text-river"/> Preparando el mapa…</div>
-    </div>
-
-    <div v-if="!placingReport" class="map-actions absolute left-3 top-[76px] z-30 flex items-center gap-2 lg:left-5 lg:top-5">
-      <button class="map-action layers-action" :aria-expanded="layersOpen" @click="layersOpen = !layersOpen"><img src="/figma/layers.svg" width="29" height="29" alt="" />Capas</button>
-      <button class="map-action report-action" :aria-expanded="reportOpen" @click="reportOpen = !reportOpen">Cargá tu reclamo</button>
-    </div>
-
-    <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleLayer" />
-    <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
-    <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen" :point="selectedPoint" @close="selectedPoint = null" />
-
-    <div v-if="placingReport" class="pointer-events-none absolute inset-x-3 top-[116px] z-40 flex justify-center sm:top-[124px]">
-      <div class="surface-panel pointer-events-auto flex w-full max-w-[560px] items-center gap-3 rounded-2xl p-3 shadow-xl sm:p-3.5">
-        <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#d94841] text-white"><Crosshair :size="20"/></span>
-        <div class="min-w-0 flex-1"><p class="text-xs font-semibold sm:text-sm">Marcá la ubicación exacta</p><p class="mt-0.5 text-[10px] leading-snug text-ink/52 sm:text-[11px]">Tocá o hacé clic sobre el punto del mapa donde está el problema.</p></div>
-        <button class="shrink-0 rounded-lg px-2.5 py-2 text-[10px] font-semibold text-ink/55 transition hover:bg-mist" @click="cancelReportLocation">Cancelar</button>
+      <div v-if="placingReport" class="flex justify-center bg-[#dfe9e8] px-3 py-2">
+        <div class="surface-panel flex w-full max-w-[560px] items-center gap-3 rounded-2xl p-3 shadow-xl sm:p-3.5">
+          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#d94841] text-white"><Crosshair :size="20"/></span>
+          <div class="min-w-0 flex-1"><p class="text-xs font-semibold sm:text-sm">Marcá la ubicación exacta</p><p class="mt-0.5 text-[10px] leading-snug text-ink/52 sm:text-[11px]">Tocá o hacé clic sobre el punto del mapa donde está el problema.</p></div>
+          <button class="shrink-0 rounded-lg px-2.5 py-2 text-[10px] font-semibold text-ink/55 transition hover:bg-mist" @click="cancelReportLocation">Cancelar</button>
+        </div>
       </div>
     </div>
+    <div class="relative z-20 min-h-0 flex-1 bg-[#dfe9e8] [container-type:size]">
+      <div class="absolute inset-x-0 bottom-0" :class="placingReport ? 'top-0' : '-top-[54px]'">
+      <ClientOnly>
+        <MapViewerClient
+          :selected-report="selectedPoint?.feature?.layerId === 'citizen-reports' && !placingReport && !reportOpen && !layersOpen ? selectedPoint : null"
+          @selection-closed="selectedPoint = null"
+          :base-map="baseMap"
+          :recent-satellite-scene="null"
+          :water-visible="waterVisible"
+          :layers="mapLayers"
+          :reports="filteredReports"
+          :reports-visible="reportsVisible"
+          :river-levels="riverLevels"
+          :river-levels-visible="riverLevelsVisible"
+          :placing-report="placingReport"
+          :report-location="reportLocation"
+          @ready="mapReady = true"
+          @loading-change="loadingLayerCount = $event"
+          @layer-error="layerError = $event"
+          @point-selected="selectMapPoint"
+          @report-location-selected="setReportLocation"
+        />
+        <template #fallback><div class="h-full w-full animate-pulse bg-[#dfe9e8]" /></template>
+      </ClientOnly>
+      </div>
 
-    <div v-if="loadingLayerCount" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><LoaderCircle :size="14" class="animate-spin text-river"/> Cargando {{ loadingLayerCount === 1 ? 'capa' : `${loadingLayerCount} capas` }}…</div>
-    <div v-else-if="riverLevelsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Waves :size="14" class="animate-pulse text-river"/> Consultando niveles de los ríos…</div>
-    <div v-else-if="reportsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Cloud :size="14" class="animate-pulse text-river"/> Sincronizando reclamos…</div>
-    <div v-else-if="reportsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ reportsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="reportsError = ''"><X :size="13"/></button></div>
-    <div v-else-if="layerError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ layerError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="layerError = ''"><X :size="13"/></button></div>
-    <div v-else-if="riverLevelsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ riverLevelsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="riverLevelsError = ''"><X :size="13"/></button></div>
+      <div v-if="!mapReady" class="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#e8f0ef]">
+        <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold shadow-sm"><Radio :size="15" class="animate-pulse text-river"/> Preparando el mapa…</div>
+      </div>
 
-    <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
+      <MapPointInfoPanel v-if="selectedPoint && selectedPoint.feature?.layerId !== 'citizen-reports' && !placingReport && !reportOpen && !layersOpen" :point="selectedPoint" @close="selectedPoint = null" />
+      <MapLayersControl hide-trigger v-if="!reportOpen && !placingReport" v-model:open="layersOpen" v-model:base-map="baseMap" v-model:report-topics="reportTopics" :layers="layers" :report-count="reports.length" @toggle="toggleMapLayer" />
+      <MapCitizenReportControl hide-trigger v-if="!layersOpen" v-model:open="reportOpen" :location="reportLocation" :selecting-location="placingReport" @request-location="requestReportLocation" @cancel-location="cancelReportLocation" @location-selected="setReportLocation" @clear-location="reportLocation = null" @created="finishReportSubmission" />
 
-    <button
-      v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport"
-      type="button"
-      class="metrics-jump"
-      aria-label="Ir a las métricas de impacto, ríos y pronóstico"
-      @click="goToMetrics"
-    >
-      <span>Ver métricas</span>
-      <ArrowDown :size="14" :stroke-width="2.25" />
-    </button>
+      <div v-if="loadingLayerCount" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><LoaderCircle :size="14" class="animate-spin text-river"/> Cargando {{ loadingLayerCount === 1 ? 'capa' : `${loadingLayerCount} capas` }}…</div>
+      <div v-else-if="riverLevelsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Waves :size="14" class="animate-pulse text-river"/> Consultando niveles de los ríos…</div>
+      <div v-else-if="reportsLoading" class="surface-panel pointer-events-none absolute bottom-[66px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-semibold"><Cloud :size="14" class="animate-pulse text-river"/> Sincronizando reclamos…</div>
+      <div v-else-if="reportsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ reportsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="reportsError = ''"><X :size="13"/></button></div>
+      <div v-else-if="layerError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ layerError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="layerError = ''"><X :size="13"/></button></div>
+      <div v-else-if="riverLevelsError" class="surface-panel absolute bottom-[66px] left-1/2 z-30 flex w-[min(92%,420px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-semibold"><CircleAlert :size="15" class="shrink-0 text-[#b75e37]"/><span class="min-w-0 flex-1">{{ riverLevelsError }}</span><button class="grid size-6 shrink-0 place-items-center rounded-md hover:bg-mist" aria-label="Cerrar error" @click="riverLevelsError = ''"><X :size="13"/></button></div>
+
+      <div v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport" class="pointer-events-none absolute bottom-[66px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1.5 text-[10px] text-white/85 backdrop-blur sm:hidden">Tocá el mapa para consultar un punto</div>
+
+      <button
+        v-if="!selectedPoint && !layersOpen && !reportOpen && !placingReport"
+        type="button"
+        class="metrics-jump"
+        aria-label="Ir a las métricas de impacto, ríos y pronóstico"
+        @click="goToMetrics"
+      >
+        <span>Ver métricas</span>
+        <ArrowDown :size="14" :stroke-width="2.25" />
+      </button>
+    </div>
   </section>
   <MapMetrics
     :reports="reports"
@@ -243,6 +288,27 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.map-actions {
+  position: relative;
+  isolation: isolate;
+  height: 54px;
+  flex-wrap: nowrap;
+  border-radius: 0 0 22px 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .06) 48%, rgba(224, 240, 246, .16));
+  backdrop-filter: blur(12px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.08);
+  border: 1px solid rgba(255, 255, 255, .48);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .85), inset 0 -1px 1px rgba(255, 255, 255, .5), 0 6px 20px rgba(26, 39, 65, .12);
+}
+.map-actions::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 10% 0%, rgba(255, 255, 255, .55), transparent 48%), radial-gradient(ellipse at 95% 100%, rgba(255, 255, 255, .3), transparent 42%);
+}
 .map-action { display: flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 24px; color: white; font-size: 13px; font-weight: 500; box-shadow: 0 3px 4px #0003; cursor: pointer; }
 .layers-action { background: #1a2741; padding-left: 10px; }
 .report-action { background: #c93636; }

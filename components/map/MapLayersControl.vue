@@ -9,7 +9,7 @@ const reportTopics = defineModel<string[]>('reportTopics', { default: () => [...
 const expandedInfoId = ref<string | null>(null)
 const reportsExpanded = ref(true)
 const neighborhoodsExpanded = ref(true)
-const order = ['citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
+const order = ['meeting-points', 'citizen-reports', 'river-levels', 'defenses', 'reservoirs', 'channels', 'renabap-neighborhoods', 'pumping', 'basins', 'sub-basins', 'water']
 const orderedLayers = computed(() => [...props.layers].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)))
 // La opción Copernicus queda oculta hasta que se retire su integración.
 const baseMapOptions = [
@@ -19,7 +19,7 @@ const baseMapOptions = [
 </script>
 
 <template>
-  <div class="pointer-events-none absolute inset-x-0 top-[126px] z-30 px-3 sm:inset-auto sm:left-3 sm:p-0 lg:left-5 lg:top-[70px]">
+  <div class="pointer-events-none absolute inset-3 z-30 flex flex-col items-end sm:right-5">
     <button v-if="!open && !hideTrigger" class="layers-trigger pointer-events-auto" @click="open = true"><img src="/figma/layers.svg" width="29" height="29" alt="" /> Capas</button>
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
       <section v-if="open" class="layers-panel pointer-events-auto" aria-label="Control de capas">
@@ -35,6 +35,7 @@ const baseMapOptions = [
             <span v-if="layer.id !== 'water'" class="layer-preview" :class="layer.id" aria-hidden="true">
               <img v-if="layer.id === 'citizen-reports'" src="/figma/reports.svg" width="28" height="28" alt="" />
               <img v-else-if="layer.id === 'river-levels'" src="/figma/river-level-marker.svg" width="25" height="25" alt="" />
+              <img v-else-if="layer.id === 'meeting-points'" src="/figma/meeting-point-marker.png" width="24" height="24" alt="" />
             </span>
             <span class="layer-label">{{ layer.label }} <span v-if="layer.id === 'citizen-reports'" class="report-count">{{ props.reportCount ?? 0 }}</span></span>
             <button v-if="layer.id === 'citizen-reports'" class="layer-info" :aria-expanded="reportsExpanded" aria-label="Categorías de reclamos" @click="reportsExpanded = !reportsExpanded"><img src="/figma/chevron.svg" width="16" height="16" alt="" :class="{ '-rotate-90': !reportsExpanded }" /></button>
@@ -59,7 +60,7 @@ const baseMapOptions = [
 
 <style scoped>
 .layers-trigger { display: flex; align-items: center; gap: 8px; border-radius: 24px; background: #1a2741; color: white; padding: 5px 18px 5px 12px; font-size: 13px; box-shadow: 0 3px 5px #0003; }
-.layers-panel { width: 370px; max-width: 100%; max-height: calc(100dvh - 160px); overflow: auto; padding: 16px 14px 24px; border-radius: 12px; background: #f7f7f7; color: #1a2741; box-shadow: 0 8px 24px #0003; }
+.layers-panel { width: 370px; max-width: 100%; max-height: 100%; overflow: auto; overscroll-behavior: contain; padding: 16px 14px 24px; border-radius: 12px; background: #f7f7f7; color: #1a2741; box-shadow: 0 8px 24px #0003; }
 .layers-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 16px; border-bottom: 1.5px solid #dcdcda; }
 .layers-header h2 { font-size: 16px; font-weight: 700; }
 .layers-header button, .layer-info { display: grid; place-items: center; min-width: 28px; min-height: 28px; cursor: pointer; }

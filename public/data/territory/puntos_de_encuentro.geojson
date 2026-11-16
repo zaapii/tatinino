@@ -1,0 +1,425 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7329949,
+          -31.5708719
+        ]
+      },
+      "properties": {
+        "name": "1. Vecinal Santa Marta",
+        "address": "Chubut 6291"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7294578,
+          -31.5988675
+        ]
+      },
+      "properties": {
+        "name": "2. Club Cabal",
+        "address": "Servando Bayo 6730"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7455348,
+          -31.5639383
+        ]
+      },
+      "properties": {
+        "name": "3. Polideportivo La Tablada",
+        "address": "Teniente Loza 6970"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7072814,
+          -31.5870711
+        ]
+      },
+      "properties": {
+        "name": "4. Jardin Botanico Ing. Lorenzo Parodi",
+        "address": "Gorriti 3902"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6988753,
+          -31.5926902
+        ]
+      },
+      "properties": {
+        "name": "5. CIC Facundo Zuviria",
+        "address": "Av. Facundo Zuviria y Azcuenaga"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7268789,
+          -31.580108
+        ]
+      },
+      "properties": {
+        "name": "6. Bomberos Voluntarios Las Flores",
+        "address": "Av. Blas Parera 8700"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7254477,
+          -31.5965209
+        ]
+      },
+      "properties": {
+        "name": "7. Asoc. Vecinal Sarmiento",
+        "address": "Vieytes 5047"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6661276,
+          -31.5979379
+        ]
+      },
+      "properties": {
+        "name": "8. Centro Comunitario Noreste",
+        "address": "Defensa y French"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6843005,
+          -31.5785164
+        ]
+      },
+      "properties": {
+        "name": "9. CIC Roca",
+        "address": "Pasaje Roca y Republica de Siria"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6892448,
+          -31.5736357
+        ]
+      },
+      "properties": {
+        "name": "10. Club Banco Provincia",
+        "address": "Av. Aristobulo del Valle 9958"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6952489,
+          -31.5827438
+        ]
+      },
+      "properties": {
+        "name": "11. Asoc. Vecinal Las Delicias",
+        "address": "Alfonsina Storni 3100"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7176924,
+          -31.6313819
+        ]
+      },
+      "properties": {
+        "name": "12. Talleres Municipales",
+        "address": "Av. Pte. Peron 3575"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.718141,
+          -31.6137866
+        ]
+      },
+      "properties": {
+        "name": "13. Cementerio Municipal",
+        "address": "Av. Blas Parera 5401"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.718696,
+          -31.6372213
+        ]
+      },
+      "properties": {
+        "name": "14. Asoc. Vecinal Juan de Garay",
+        "address": "Salvador Caputto 3955"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7245005,
+          -31.6610891
+        ]
+      },
+      "properties": {
+        "name": "15. Boca del Tigre",
+        "address": "J. J. Paso y Zavalla"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7223451,
+          -31.6649503
+        ]
+      },
+      "properties": {
+        "name": "16. Vecinal Centenario",
+        "address": "Zavalia 711"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7341497,
+          -31.6649669
+        ]
+      },
+      "properties": {
+        "name": "17. CILSA",
+        "address": "Mar Argentino y R11"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7259015,
+          -31.6546457
+        ]
+      },
+      "properties": {
+        "name": "18. Bochas Club Mitre",
+        "address": "General Lopez 3815"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7243547,
+          -31.6545961
+        ]
+      },
+      "properties": {
+        "name": "19. Andenes Estación Mitre",
+        "address": "General López y San Juan"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.729875,
+          -31.6563902
+        ]
+      },
+      "properties": {
+        "name": "20. Estación San Lorenzo",
+        "address": "Entre Rios 4080"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7290336,
+          -31.6409653
+        ]
+      },
+      "properties": {
+        "name": "21. Mediateca",
+        "address": "Pje. Mitre y Tucuman"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6337049,
+          -31.6396548
+        ]
+      },
+      "properties": {
+        "name": "22. La virgencita",
+        "address": "RN 168 y calle principal"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6345287,
+          -31.6427907
+        ]
+      },
+      "properties": {
+        "name": "23. Capilla Nuestra Señora de la Guardia",
+        "address": "De Petre y Serafina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6266319,
+          -31.6380301
+        ]
+      },
+      "properties": {
+        "name": "24. Parada de Omnibus",
+        "address": "Ruta 1 y Favaloro"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.7008008,
+          -31.6652981
+        ]
+      },
+      "properties": {
+        "name": "25. Asoc. Vecinal Pro Mejoras Alto Verde",
+        "address": "Manzana 1. M. Gomez e I. Monzon"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6050493,
+          -31.6268913
+        ]
+      },
+      "properties": {
+        "name": "26. Distrito La Costa",
+        "address": "RP N° 1 - Km 2.7"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6078365,
+          -31.6234616
+        ]
+      },
+      "properties": {
+        "name": "27. Estación Colastine Norte",
+        "address": "Las Macluras y Orquideas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.60682,
+          -31.6271472
+        ]
+      },
+      "properties": {
+        "name": "28. ASOEM Camping",
+        "address": "RP N° 1 - Km 2.5"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6836525,
+          -31.603086
+        ]
+      },
+      "properties": {
+        "name": "29. Asoc. Vecinal Guadalupe Oeste",
+        "address": "Risso 1745"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6954978,
+          -31.596201
+        ]
+      },
+      "properties": {
+        "name": "30. Asoc. Vecinal Facundo Quiroga",
+        "address": "Almafuerte 7739"
+      }
+    }
+  ]
+}

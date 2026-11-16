@@ -12,9 +12,10 @@ const isRenabapNeighborhood = computed(() => props.point.feature?.layerId.starts
 const isCisurNeighborhood = computed(() => props.point.feature?.layerId === 'renabap-hydric-risk')
 const isRiverLevel = computed(() => props.point.feature?.layerId === 'river-levels')
 const isRiverReference = computed(() => isRiverLevel.value && props.point.feature?.properties.isRiverReference === true)
+const isMeetingPoint = computed(() => props.point.feature?.layerId === 'meeting-points')
 const isNamedInfrastructure = computed(() => ['reservoirs', 'channels', 'pumping'].includes(props.point.feature?.layerId ?? ''))
 const panelTitle = computed(() => {
-  if (isNamedInfrastructure.value && props.point.feature?.properties.name) return String(props.point.feature.properties.name)
+  if ((isNamedInfrastructure.value || isMeetingPoint.value) && props.point.feature?.properties.name) return String(props.point.feature.properties.name)
   return props.point.feature?.layerLabel ?? 'Ubicación consultada'
 })
 
@@ -105,10 +106,10 @@ function detailValueClass(key: string) {
 </script>
 
 <template>
-  <section class="surface-panel overflow-auto rounded-2xl p-4" :style="isCitizenReport ? { background: '#f7f7f7', padding: '20px 22px' } : undefined" :class="popover ? 'max-h-[min(460px,60dvh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[72dvh] sm:inset-auto sm:right-5 sm:top-[132px] sm:w-[348px]'" aria-live="polite" @click.stop @dblclick.stop @mousedown.stop @touchstart.stop>
+  <section class="surface-panel overflow-auto overscroll-contain rounded-2xl p-4" :style="isCitizenReport ? { background: '#f7f7f7', padding: '20px 22px' } : undefined" :class="popover ? 'max-h-[min(460px,60cqh)] w-full' : 'absolute inset-x-3 bottom-3 z-40 max-h-[calc(100%-1.5rem)] sm:inset-auto sm:right-5 sm:top-3 sm:w-[348px]'" aria-live="polite" @click.stop @dblclick.stop @mousedown.stop @touchstart.stop>
     <header class="flex items-start justify-between gap-4">
       <div class="min-w-0">
-        <p v-if="!isCitizenReport" class="ui-label text-river">Consulta en el mapa</p>
+        <p v-if="!isCitizenReport" class="ui-label text-river">{{ isMeetingPoint ? 'Punto de encuentro' : 'Consulta en el mapa' }}</p>
         <h2 class="font-bold" :class="isCitizenReport ? 'flex items-start gap-1 text-base leading-[19px]' : 'mt-1 text-lg'"><img v-if="isCitizenReport" :src="isGraveReport ? '/figma/grave.svg' : '/figma/medio.svg'" :alt="isGraveReport ? 'Riesgo grave' : 'Riesgo medio'" width="23" height="23" class="size-[23px] shrink-0" />{{ panelTitle }}</h2>
       </div>
       <button type="button" class="grid size-9 shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink/65 transition hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-river" aria-label="Cerrar información" @click.stop="$emit('close')"><X :size="18"/></button>
@@ -122,6 +123,14 @@ function detailValueClass(key: string) {
       <div class="mt-3">
         <p class="text-xs tracking-[1.2px] uppercase">Descripción</p>
         <p class="mt-1.5 whitespace-pre-wrap text-sm font-medium leading-[22px]">{{ point.feature.properties.description || 'Sin descripción' }}</p>
+      </div>
+    </div>
+
+    <div v-else-if="isMeetingPoint" class="mt-4 flex items-center gap-3 rounded-xl bg-green-50 p-3.5">
+      <img src="/figma/meeting-point-marker.png" width="24" height="24" alt="" class="shrink-0" />
+      <div>
+        <p class="ui-label text-green-800">Dirección</p>
+        <p class="mt-1 text-sm font-medium">{{ point.feature?.properties.address }}</p>
       </div>
     </div>
 
@@ -151,13 +160,13 @@ function detailValueClass(key: string) {
 
     <div v-else class="mt-4 flex items-start gap-3 rounded-xl bg-mist p-3.5"><MapPin :size="18" class="mt-0.5 shrink-0 text-river"/><div><p class="text-xs font-semibold">Sin elemento técnico seleccionado</p><p class="mt-1 text-xs leading-relaxed text-ink/57">Activá una capa o acercate al mapa para consultar su información.</p></div></div>
 
-    <div v-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10">
+    <div v-if="!isCitizenReport && !isNamedInfrastructure && !isMeetingPoint" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10">
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Latitud</p><p class="mt-1 font-mono text-xs">{{ point.latitude.toFixed(6) }}</p></div>
       <div class="bg-white p-3"><p class="ui-label text-[9px] text-ink/42">Longitud</p><p class="mt-1 font-mono text-xs">{{ point.longitude.toFixed(6) }}</p></div>
     </div>
 
 
     <MapCisurSource v-if="isCisurNeighborhood" class="mt-3" />
-    <p v-else-if="!isCitizenReport && !isNamedInfrastructure" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Otros Barrios.kmz.zip”, convertido a GeoJSON conservando sus coordenadas y atributos.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
+    <p v-else-if="!isCitizenReport && !isNamedInfrastructure && !isMeetingPoint" class="mt-3 text-[10px] leading-relaxed text-ink/46">{{ isRiverLevel ? 'Fuente: API pública del Sistema de Información y Alerta Hidrológico del Instituto Nacional del Agua. Las fechas y umbrales corresponden a cada estación.' : isRenabapNeighborhood ? 'Fuente: archivo “Otros Barrios.kmz.zip”, convertido a GeoJSON conservando sus coordenadas y atributos.' : 'Fuente: Plano Hidráulica Santa Fe, actualización 2025. Conversión GeoJSON provista para esta maqueta; proyección de origen asumida y pendiente de validación técnica.' }}</p>
   </section>
 </template>

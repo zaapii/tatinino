@@ -92,7 +92,8 @@ async function fetchImageryDate() {
 let reportPopup: Popup | undefined
 let garelloMarker: Marker | undefined
 let garelloMarkerDismissed = false
-let createGarelloMarker: ((element: HTMLElement) => Marker) | undefined
+let createWorkMarker: ((element: HTMLElement, anchor?: 'top' | 'bottom', onDismiss?: () => void) => Marker) | undefined
+const nationalWorkMarkers: Marker[] = []
 let popupResizeObserver: ResizeObserver | undefined
 let createPopup: (() => Popup) | undefined
 const popupHost = shallowRef<HTMLElement | null>(null)
@@ -129,10 +130,10 @@ function syncReportPopup() {
       reportPopup.setLngLat([props.selectedReport.longitude, props.selectedReport.latitude])
       const card = popupHost.value.getBoundingClientRect()
       const bounds = map.getContainer().getBoundingClientRect()
-      const topMargin = window.innerWidth >= 768 ? 130 : 12
       const dx = card.left < bounds.left + 12 ? card.left - bounds.left - 12
         : card.right > bounds.right - 12 ? card.right - bounds.right + 12 : 0
-      const dy = card.top < bounds.top + topMargin ? card.top - bounds.top - topMargin : 0
+      const dy = card.top < bounds.top + 12 ? card.top - bounds.top - 12
+        : card.bottom > bounds.bottom - 12 ? card.bottom - bounds.bottom + 12 : 0
       if (dx || dy) map.panBy([dx, dy], { duration: 0 })
     })
     popupResizeObserver.observe(popupHost.value)
@@ -391,7 +392,7 @@ const reportSeverityColorExpression = [
   citizenReportSeverities.medio.color,
 ] as unknown as ExpressionSpecification
 
-function loadReportAsset(src: string): Promise<HTMLImageElement> {
+function loadMapIcon(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
@@ -410,8 +411,8 @@ function addReportIcons() {
     // Keep the data's severity; illustration colors must not reclassify reports.
     const base = definition.severity === 'grave' ? 'grave' : 'medio'
     void Promise.all([
-      loadReportAsset(`/figma/${base}.svg`),
-      kind ? loadReportAsset(`/figma/${kind}-glyph.svg`) : Promise.resolve(null),
+      loadMapIcon(`/figma/${base}.svg`),
+      kind ? loadMapIcon(`/figma/${kind}-glyph.svg`) : Promise.resolve(null),
     ]).then(([background, glyph]) => {
       if (map !== currentMap || !currentMap.hasImage(definition.id)) return
       const canvas = document.createElement('canvas')
@@ -446,6 +447,7 @@ const hitStyleIdsFor = (id: string): [string, string] => [
   `hydraulic-${id}-point-hit`,
 ]
 const allStyleIdsFor = (id: string) => [...styleIdsFor(id), ...hitStyleIdsFor(id)]
+const meetingPointLayerId = styleIdsFor('meeting-points')[2]
 
 function updateLoadingState() {
   emit('loadingChange', loadingSources.size)
@@ -540,6 +542,24 @@ function addHydraulicLayer(definition: MapLayerDefinition) {
 
   const visibility: 'visible' | 'none' = definition.enabled ? 'visible' : 'none'
   const shared = { source: sourceId, minzoom: source.minZoom, layout: { visibility } }
+  if (definition.id === 'meeting-points') {
+    if (!map.getLayer(meetingPointLayerId)) {
+      addMapMarkerImage(meetingPointLayerId, '/figma/meeting-point-marker.png', 48)
+      map.addLayer({
+        ...shared,
+        id: meetingPointLayerId,
+        type: 'symbol',
+        layout: {
+          visibility,
+          'icon-image': meetingPointLayerId,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+      })
+    }
+    return
+  }
+
   const lineGeometryFilter: FilterSpecification = definition.id === 'reservoirs'
     ? ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]]
     : ['==', ['geometry-type'], 'LineString']
@@ -717,8 +737,35 @@ function selectGarelloReport() {
   })
 }
 
+function workMarkerElement(name: string, jurisdiction: 'Provincial' | 'Nacional') {
+  const element = document.createElement('article')
+  element.className = 'work-map-marker'
+  element.setAttribute('aria-label', `Obra inconclusa ${jurisdiction.toLowerCase()}: ${name}`)
+  element.innerHTML = `
+    <button type="button" class="work-map-marker-close" aria-label="Ocultar obra ${name}">×</button>
+    <span class="work-map-marker-status">Obra inconclusa</span>
+    <span class="work-map-marker-jurisdiction">${jurisdiction}</span>
+    <strong>${name}</strong>
+    <i aria-hidden="true"></i>
+  `
+  return element
+}
+
+function addNationalWorkMarkers() {
+  if (!map || !createWorkMarker) return
+  const works = [
+    { name: '29 de Abril', coordinates: [-60.698957, -31.586481], anchor: 'bottom' },
+    { name: 'Los Hornos', coordinates: [-60.710072, -31.610807], anchor: 'top' },
+  ] as const
+  for (const { name, coordinates, anchor } of works) {
+    const element = workMarkerElement(name, 'Nacional')
+    element.classList.add('work-map-marker-national')
+    nationalWorkMarkers.push(createWorkMarker(element, anchor).setLngLat([...coordinates]).addTo(map))
+  }
+}
+
 function syncGarelloMarker() {
-  if (!map || !styleReady || !createGarelloMarker) return
+  if (!map || !styleReady || !createWorkMarker) return
   const report = garelloReport()
   if (!report || garelloMarkerDismissed) {
     garelloMarker?.remove()
@@ -727,30 +774,18 @@ function syncGarelloMarker() {
   }
 
   if (!garelloMarker) {
-    const element = document.createElement('article')
-    element.className = 'garello-map-marker'
-    element.setAttribute('aria-label', 'Obra inconclusa: Terraplén Garello')
-    element.innerHTML = `
-      <button type="button" class="garello-map-marker-close" aria-label="Cerrar alerta del Terraplén Garello">×</button>
-      <span class="garello-map-marker-status">Obra inconclusa</span>
-      <strong>Terraplén Garello</strong>
-      <span class="garello-map-marker-copy">Obra de protección hídrica pendiente.</span>
-      <button type="button" style="background-color: #b73b1d;">Más información</button>
-      <i aria-hidden="true"></i>
-    `
-    element.querySelector<HTMLButtonElement>('.garello-map-marker-close')?.addEventListener('click', event => {
-      event.preventDefault()
-      event.stopPropagation()
-      garelloMarkerDismissed = true
-      garelloMarker?.remove()
-      garelloMarker = undefined
-    })
+    const element = workMarkerElement('Terraplén Garello', 'Provincial')
+    element.classList.add('work-map-marker-interactive')
+    element.insertAdjacentHTML('beforeend', '<button type="button">Más información</button>')
     element.addEventListener('click', event => {
       event.preventDefault()
       event.stopPropagation()
       selectGarelloReport()
     })
-    garelloMarker = createGarelloMarker(element)
+    garelloMarker = createWorkMarker(element, 'bottom', () => {
+      garelloMarkerDismissed = true
+      garelloMarker = undefined
+    })
       .setLngLat([report.point.longitude, report.point.latitude])
       .addTo(map)
   }
@@ -768,18 +803,18 @@ function riverLevelGeoJson() {
   }
 }
 
-function addRiverLevelMarkerImage() {
-  if (!map || map.hasImage(riverLevelMarkerImageId)) return
+function addMapMarkerImage(id: string, path: string, size: number) {
+  if (!map || map.hasImage(id)) return
   const currentMap = map
-  currentMap.addImage(riverLevelMarkerImageId, { width: 92, height: 92, data: new Uint8Array(92 * 92 * 4) }, { pixelRatio: 2 })
-  void loadReportAsset('/figma/river-level-marker.svg').then(image => {
-    if (map !== currentMap || !currentMap.hasImage(riverLevelMarkerImageId)) return
+  currentMap.addImage(id, { width: size, height: size, data: new Uint8Array(size * size * 4) }, { pixelRatio: 2 })
+  void loadMapIcon(path).then(image => {
+    if (map !== currentMap || !currentMap.hasImage(id)) return
     const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 92
+    canvas.width = canvas.height = size
     const context = canvas.getContext('2d')
     if (!context) return
-    context.drawImage(image, 0, 0, 92, 92)
-    currentMap.updateImage(riverLevelMarkerImageId, context.getImageData(0, 0, 92, 92))
+    context.drawImage(image, 0, 0, size, size)
+    currentMap.updateImage(id, context.getImageData(0, 0, size, size))
   }).catch(error => emit('layerError', error.message))
 }
 
@@ -826,7 +861,7 @@ function updateRiverLevelReferenceLayer() {
 
 function addRiverLevelLayers() {
   if (!map) return
-  addRiverLevelMarkerImage()
+  addMapMarkerImage(riverLevelMarkerImageId, '/figma/river-level-marker.svg', 92)
   const visibility: 'visible' | 'none' = props.riverLevelsVisible ? 'visible' : 'none'
   if (!map.getSource(riverLevelSourceId)) map.addSource(riverLevelSourceId, { type: 'geojson', data: riverLevelGeoJson() })
   else updateRiverLevelData()
@@ -1154,6 +1189,7 @@ function syncHydraulicLayers() {
     garelloReportHaloLayerId,
     reportPointLayerId,
 
+    meetingPointLayerId,
     draftHaloLayerId,
     draftPointLayerId,
   ]) {
@@ -1194,11 +1230,14 @@ function selectableFeaturesAt(point: { x: number; y: number }) {
   if (!map || !styleReady) return []
   const layers = renderedSelectableLayerIds()
   if (!layers.length) return []
-  return map.queryRenderedFeatures(point, { layers })
+  return map.queryRenderedFeatures([point.x, point.y], { layers })
 }
 
 function preferredSelectableFeature(point: { x: number; y: number }) {
   const features = selectableFeaturesAt(point)
+  const meetingPoint = features.find(feature => feature.layer.id === meetingPointLayerId)
+  if (meetingPoint) return meetingPoint
+
   const report = features.find(feature => feature.source === reportSourceId)
   if (report) return report
 
@@ -1326,7 +1365,15 @@ onMounted(async () => {
     className: 'citizen-report-popover',
     offset: [0, -42],
   })
-  createGarelloMarker = element => new maplibregl.Marker({ element, anchor: 'bottom', offset: [0, -16] })
+  createWorkMarker = (element, anchor = 'bottom', onDismiss) => {
+    const marker = new maplibregl.Marker({ element, anchor, offset: [0, anchor === 'bottom' ? -8 : 8] })
+    element.querySelector('.work-map-marker-close')?.addEventListener('click', event => {
+      event.stopPropagation()
+      marker.remove()
+      onDismiss?.()
+    })
+    return marker
+  }
   maplibregl.setWorkerUrl('/vendor/maplibre-gl-worker.mjs')
   map = new maplibregl.Map({
     container: mapElement.value,
@@ -1337,6 +1384,12 @@ onMounted(async () => {
     maxZoom: mapConfig.maxZoom,
     attributionControl: false,
     clickTolerance: 7,
+    cooperativeGestures: true,
+    locale: {
+      'CooperativeGesturesHandler.WindowsHelpText': 'Usá Ctrl y la rueda para acercar el mapa',
+      'CooperativeGesturesHandler.MacHelpText': 'Usá ⌘ y la rueda para acercar el mapa',
+      'CooperativeGesturesHandler.MobileHelpText': 'Usá dos dedos para mover el mapa',
+    },
   })
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right')
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
@@ -1345,11 +1398,12 @@ onMounted(async () => {
     styleReady = true
     simplifyBaseMap()
     updateBaseVisibility(props.waterVisible)
-    syncHydraulicLayers()
     addCitizenReportLayers()
+    addNationalWorkMarkers()
     syncGarelloMarker()
     startReportPulse()
     addRiverLevelLayers()
+    syncHydraulicLayers()
     updateBaseMap()
     map?.on('zoom', syncRecentZoomVisibility)
     const mobile = window.innerWidth < 640
@@ -1398,7 +1452,9 @@ onMounted(async () => {
     }
 
     const feature = preferredSelectableFeature(event.point)
-    const report = feature?.source === reportSourceId ? undefined : reportNear(event.point)
+    const report = feature?.layer.id === meetingPointLayerId || feature?.source === reportSourceId
+      ? undefined
+      : reportNear(event.point)
     if (!report && feature) {
       const featureCoordinates = feature.geometry.type === 'Point'
         ? feature.geometry.coordinates
@@ -1443,6 +1499,7 @@ onBeforeUnmount(() => {
   closeReportPopup()
   garelloMarker?.remove()
   garelloMarker = undefined
+  nationalWorkMarkers.forEach(marker => marker.remove())
   styleReady = false
   resizeObserver?.disconnect()
   if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
@@ -1472,83 +1529,84 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:global(.garello-map-marker) {
-  position: relative;
+:global(.work-map-marker) {
+  position: absolute;
   display: grid;
-  gap: 3px;
-  width: 218px;
+  gap: 1px;
+  width: 114px;
   border: 2px solid #e85d32;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
-  padding: 11px 12px 12px;
+  padding: 4px 6px 5px;
   color: #172640;
   box-shadow: 0 10px 28px rgba(24, 46, 72, .32);
   font-family: 'Instrument Sans', sans-serif;
-  cursor: pointer;
-  transition: transform .18s ease, box-shadow .18s ease;
+  transition: box-shadow .18s ease;
 }
-:global(.garello-map-marker:hover), :global(.garello-map-marker:focus-within) {
-  transform: translateY(-3px);
+:global(.work-map-marker.work-map-marker-national) { width: 98px; pointer-events: none; }
+:global(.work-map-marker-interactive) { cursor: pointer; }
+:global(.work-map-marker-interactive:hover), :global(.work-map-marker-interactive:focus-within) {
   box-shadow: 0 14px 34px rgba(24, 46, 72, .4);
 }
-:global(.garello-map-marker-status) {
+:global(.work-map-marker-status), :global(.work-map-marker-jurisdiction) {
   color: #b73b1d;
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: .075em;
-  text-transform: uppercase;
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1.15;
 }
-:global(.garello-map-marker strong) { font-size: 15px; line-height: 1.15; }
-:global(.garello-map-marker-copy) { color: #506074; font-size: 10px; line-height: 1.32; }
-:global(.garello-map-marker button) {
+:global(.work-map-marker-status) { white-space: nowrap; }
+:global(.work-map-marker-jurisdiction) { color: #506074; letter-spacing: .075em; text-transform: uppercase; }
+:global(.work-map-marker strong) { margin-top: 1px; font-size: 11px; line-height: 1.15; }
+:global(.work-map-marker button) {
   justify-self: start;
-  margin-top: 4px;
+  margin-top: 2px;
   border-radius: 999px;
-  background: #1a2741;
-  padding: 6px 9px;
+  background: #b73b1d;
+  padding: 3px 6px;
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 750;
 }
-:global(.garello-map-marker .garello-map-marker-close) {
+:global(.work-map-marker .work-map-marker-close) {
   position: absolute;
   z-index: 2;
-  top: 6px;
-  right: 7px;
+  top: 0;
+  right: 0;
   display: grid;
-  width: 25px;
-  height: 25px;
+  width: 19px;
+  height: 19px;
   margin: 0;
   place-items: center;
   border-radius: 50%;
   background: transparent;
   padding: 0;
   color: #607087;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
+  pointer-events: auto;
 }
-:global(.garello-map-marker .garello-map-marker-close:hover),
-:global(.garello-map-marker .garello-map-marker-close:focus-visible) {
+:global(.work-map-marker .work-map-marker-close:hover),
+:global(.work-map-marker .work-map-marker-close:focus-visible) {
   background: #eef1f5;
   color: #172640;
 }
-:global(.garello-map-marker i) {
+:global(.work-map-marker i) {
   position: absolute;
-  bottom: -10px;
+  bottom: -7px;
   left: 50%;
-  width: 17px;
-  height: 17px;
+  width: 12px;
+  height: 12px;
   border-right: 2px solid #e85d32;
   border-bottom: 2px solid #e85d32;
   background: #fff;
   transform: translateX(-50%) rotate(45deg);
 }
-@media (max-width: 639px) {
-  :global(.garello-map-marker) { width: 184px; padding: 9px 10px 10px; }
-  :global(.garello-map-marker strong) { font-size: 13px; }
-  :global(.garello-map-marker-copy) { display: none; }
+:global(.work-map-marker.maplibregl-marker-anchor-top i) {
+  top: -7px;
+  bottom: auto;
+  transform: translateX(-50%) rotate(225deg);
 }
 :deep(.citizen-report-popover) {
   z-index: 40;

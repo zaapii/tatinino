@@ -4,6 +4,10 @@ export function useMapLayers() {
   const layers = ref<MapLayerDefinition[]>([
     { id: 'water', label: 'Mapa base y cursos de agua', description: 'Calles, barrios, Paraná, Salado, lagunas y canales de OpenStreetMap', enabled: true, status: 'active', group: 'current' },
     { id: 'river-levels', label: 'Niveles de los ríos', description: 'Escalas oficiales de Paraná, Santa Fe, Salado y Colastiné; el valor se repite sobre el cauce como referencia de su estación', enabled: true, status: 'active', group: 'current', color: '#0877ad' },
+    {
+      id: 'meeting-points', label: 'Puntos de Encuentro', description: 'Tocá un punto para consultar su nombre y dirección.', enabled: true, status: 'available', group: 'territory',
+      source: { file: 'puntos_de_encuentro.geojson', dataUrl: '/data/territory/puntos_de_encuentro.geojson', featureCount: 30, color: '#15803d', minZoom: 10 },
+    },
     { id: 'citizen-reports', label: 'Reclamos', description: 'Puntos aprobados con iconos según categoría; grave en rojo y medio en amarillo', enabled: true, status: 'available', group: 'community', color: '#d94841' },
     {
       id: 'defenses', label: 'Terraplenes y defensas', description: 'Trazado de la infraestructura de protección hídrica', enabled: true, status: 'available', group: 'protection',

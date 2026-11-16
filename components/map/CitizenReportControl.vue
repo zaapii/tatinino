@@ -203,13 +203,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="pointer-events-none absolute bottom-0 left-[112px] z-30 p-3 sm:bottom-auto sm:left-5 sm:p-0" :class="open ? 'sm:top-[70px]' : 'sm:top-[70px]'">
+  <div class="pointer-events-none absolute inset-3 z-30 flex flex-col items-end justify-end sm:right-5 sm:justify-start">
     <button v-if="!open && !selectingLocation && !hideTrigger" class="pointer-events-auto flex items-center gap-2 rounded-xl bg-[#d94841] px-3.5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#c93a34] sm:px-4" @click="open = true">
       <MessageSquareWarning :size="18"/><span class="sm:hidden">Reclamo</span><span class="hidden sm:inline">Cargá tu reclamo</span>
     </button>
 
     <Transition enter-active-class="transition duration-200" enter-from-class="translate-y-4 opacity-0" leave-active-class="transition duration-150" leave-to-class="translate-y-4 opacity-0">
-      <section v-if="open" class="report-panel surface-panel pointer-events-auto fixed inset-x-3 bottom-3 flex max-h-[calc(100dvh-88px)] flex-col overflow-hidden rounded-2xl sm:absolute sm:bottom-auto sm:left-0 sm:top-0 sm:max-h-[calc(100dvh-216px)] sm:w-[378px] lg:max-h-[calc(100dvh-152px)]" aria-label="Cargar un reclamo ciudadano">
+      <section v-if="open" class="report-panel surface-panel pointer-events-auto flex max-h-full w-full flex-col overflow-hidden rounded-2xl sm:max-w-[378px]" aria-label="Cargar un reclamo ciudadano">
         <header class="relative z-10 flex shrink-0 items-start justify-between gap-4 px-5 py-5 text-white">
           <div><p class="ui-label text-white/70">Participación ciudadana</p><h2 class="mt-1 text-lg font-semibold">Cargá tu reclamo</h2></div>
           <button type="button" class="grid size-8 shrink-0 place-items-center rounded-full border border-[#67bdf0] text-[#67bdf0] transition hover:bg-white/10" aria-label="Cerrar formulario" @click="open = false"><X :size="18"/></button>

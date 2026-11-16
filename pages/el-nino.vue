@@ -86,16 +86,21 @@ const documents = [
           situaciones de emergencia.
         </p>
 
-        <p class="nino-source">
-          Fuente para comprender el fenómeno:
-          <a
-            href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ensofaq.shtml"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Centro de Predicción Climática de NOAA
-          </a>.
-        </p>
+        <div class="nino-source">
+          Fuentes para comprender el fenómeno
+          <ul>
+            <li>
+              <a href="/documentos/informe-fdhi-el-nino-2026.pdf" target="_blank" rel="noopener noreferrer">
+                Informe de la Fundación para el Desarrollo Humano Integral
+              </a>
+            </li>
+            <li>
+              <a href="/documentos/protocolo-el-nino-2026.pdf" target="_blank" rel="noopener noreferrer">
+                Protocolo - El Niño 2026
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <section
@@ -249,9 +254,17 @@ h1 img {
 ------------------------------------------------- */
 
 .nino-source {
+  break-inside: avoid;
+  margin-bottom: 24px;
   font-size: 14px;
   line-height: 1.5;
   color: #56677b;
+}
+
+.nino-source ul {
+  margin-top: 4px;
+  padding-inline-start: 1.25em;
+  list-style: disc;
 }
 
 .nino-source a {

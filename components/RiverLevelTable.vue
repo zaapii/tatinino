@@ -79,6 +79,10 @@ onBeforeUnmount(() => {
           <th scope="row">
             {{ reading.stationName }}
             <small>{{ reading.riverName }}</small>
+            <small class="thresholds">
+              <span class="alert-threshold">Alerta: {{ formatLevel(reading.alertLevel) }}</span>
+              <span class="evacuation-threshold">Evacuación: {{ formatLevel(reading.evacuationLevel) }}</span>
+            </small>
           </th>
           <td :class="!reading.isStale ? reading.status : undefined">
             <strong>{{ formatLevel(reading.level) }}</strong>
@@ -100,7 +104,8 @@ onBeforeUnmount(() => {
         </tr>
       </tbody>
     </table>
-    <p v-else-if="!loading" class="table-note">No se pudieron consultar las estaciones.</p>
+    <p v-else-if="loading" class="table-note" role="status">Consultando estaciones…</p>
+    <p v-else class="table-note">No se pudieron consultar las estaciones.</p>
     <p id="river-table-note" class="table-note">
       <span v-if="forecastLoading && !forecasts.length" role="status">Consultando pronósticos del INA…</span>
       <span v-else-if="forecastError" role="status">No se pudo cargar el pronóstico del INA.</span>
@@ -108,8 +113,9 @@ onBeforeUnmount(() => {
       <span v-else-if="!forecastLoading && !forecasts.length">El INA no tiene pronósticos vigentes para estas estaciones.</span>
       <span v-else-if="forecasts.length">
         Valores centrales del boletín<template v-if="bulletinDate"> del <time :datetime="bulletinDate">{{ forecastDateFormatter.format(new Date(bulletinDate)) }}</time></template>.
-        Los plazos se cuentan desde su emisión. — indica dato no disponible.
+        Los plazos se cuentan desde su emisión.
       </span>
+      <span v-if="rows.length">— indica dato no disponible.</span>
       <a href="https://www.ina.gov.ar/alerta/index.php?seccion=8" target="_blank" rel="noopener noreferrer">Boletines del INA</a>
     </p>
   </div>
@@ -120,12 +126,18 @@ onBeforeUnmount(() => {
 table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border: 1px solid #51617c; border-radius: 10px; overflow: hidden; font-size: 13px; }
 thead { background: #273754; }
 th, td { padding: 10px 9px; text-align: left; vertical-align: top; }
-thead th:first-child { width: 33%; }
+thead th:first-child { width: 36%; }
 tbody > tr > * { border-top: 1px solid #51617c; }
 tbody th { font-weight: 650; }
 tbody .port-row { background: #273754; }
 td strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 small { display: block; margin-top: 3px; color: #c5d2e6; font-size: 11px; line-height: 1.25; }
+.thresholds { display: flex; flex-wrap: wrap; gap: 2px 5px; font-variant-numeric: tabular-nums; }
+.alert-threshold { color: #ffba73; }
+.evacuation-threshold { color: #ffa3a8; }
+@media (min-width: 640px) {
+  .evacuation-threshold::before { margin-right: 5px; color: #c5d2e6; content: '|'; }
+}
 .alert { background: #573916; color: #ffda8c; }
 .evacuation { background: #71252e; color: #ffd6d8; }
 .alert small, .evacuation small { color: inherit; }
@@ -134,7 +146,9 @@ small { display: block; margin-top: 3px; color: #c5d2e6; font-size: 11px; line-h
 @media (max-width: 420px) {
   table { font-size: 11px; }
   th, td { padding: 8px 4px; }
-  thead th:first-child { width: 30%; }
   small { font-size: 10px; }
+}
+@media (max-width: 360px) {
+  thead th:first-child { width: 40%; }
 }
 </style>
