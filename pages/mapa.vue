@@ -236,6 +236,7 @@ onBeforeUnmount(() => {
           :river-levels="riverLevels"
           :river-levels-visible="riverLevelsVisible"
           :placing-report="placingReport"
+          :top-overlay-height="placingReport ? 0 : 54"
           :report-location="reportLocation"
           @ready="mapReady = true"
           @loading-change="loadingLayerCount = $event"

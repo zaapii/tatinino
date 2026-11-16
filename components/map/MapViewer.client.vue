@@ -27,6 +27,7 @@ const props = defineProps<{
   riverLevels: RiverLevelReading[]
   riverLevelsVisible: boolean
   placingReport: boolean
+  topOverlayHeight?: number
   reportLocation: MapPoint | null
 }>()
 
@@ -125,20 +126,24 @@ function syncReportPopup() {
     reportPopup = createPopup().setDOMContent(popupHost.value)
       .setLngLat([selection.longitude, selection.latitude]).addTo(map)
     reportPopup.on('close', onPopupClosed)
-    popupResizeObserver = new ResizeObserver(() => {
-      if (!reportPopup || !props.selectedReport || !map || !popupHost.value) return
-      reportPopup.setLngLat([props.selectedReport.longitude, props.selectedReport.latitude])
-      const card = popupHost.value.getBoundingClientRect()
-      const bounds = map.getContainer().getBoundingClientRect()
-      const dx = card.left < bounds.left + 12 ? card.left - bounds.left - 12
-        : card.right > bounds.right - 12 ? card.right - bounds.right + 12 : 0
-      const dy = card.top < bounds.top + 12 ? card.top - bounds.top - 12
-        : card.bottom > bounds.bottom - 12 ? card.bottom - bounds.bottom + 12 : 0
-      if (dx || dy) map.panBy([dx, dy], { duration: 0 })
-    })
+    popupResizeObserver = new ResizeObserver(keepReportPopupVisible)
     popupResizeObserver.observe(popupHost.value)
   }
   else reportPopup.setLngLat([selection.longitude, selection.latitude])
+}
+
+function keepReportPopupVisible() {
+  if (!reportPopup || !props.selectedReport || !map || !popupHost.value) return
+  reportPopup.setLngLat([props.selectedReport.longitude, props.selectedReport.latitude])
+  const card = popupHost.value.getBoundingClientRect()
+  const bounds = map.getContainer().getBoundingClientRect()
+  const visibleTop = Math.max(0, bounds.top + (props.topOverlayHeight ?? 0)) + 12
+  const visibleBottom = Math.min(window.innerHeight, bounds.bottom) - 12
+  const dx = card.left < bounds.left + 12 ? card.left - bounds.left - 12
+    : card.right > bounds.right - 12 ? card.right - bounds.right + 12 : 0
+  const dy = card.top < visibleTop ? card.top - visibleTop
+    : card.bottom > visibleBottom ? card.bottom - visibleBottom : 0
+  if (dx || dy) map.panBy([dx, dy], { duration: 0 })
 }
 
 function updateBaseMap() {
@@ -1485,6 +1490,7 @@ onMounted(async () => {
     if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
     resizeFrame = requestAnimationFrame(() => {
       map?.resize()
+      keepReportPopupVisible()
       resizeFrame = undefined
     })
   })
