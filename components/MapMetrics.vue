@@ -69,12 +69,16 @@ function thresholdLabel(reading: RiverLevelReading, value: number | null) {
 }
 
 function registerRiverRow(element: unknown, id: string) {
+  const previousElement = riverElements.get(id)
+  if (element === previousElement) return
+  if (previousElement) riverObserver?.unobserve(previousElement)
   if (!(element instanceof HTMLElement)) {
     riverElements.delete(id)
     return
   }
   element.dataset.riverId = id
   riverElements.set(id, element)
+  if (visibleRiverIds.value.has(id)) return
   if (reduceMotion) visibleRiverIds.value = new Set([...visibleRiverIds.value, id])
   else riverObserver?.observe(element)
 }
@@ -126,8 +130,36 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 </script>
 
 <template>
-  <section id="metricas" class="impact-section" aria-labelledby="impact-title">
+  <section id="metricas" class="impact-section" aria-label="Métricas del mapa">
     <div class="impact-content">
+      <section id="altura-rios" class="impact-block rivers-block" aria-labelledby="river-level-title">
+        <h2 id="river-level-title" class="impact-title">Altura de los ríos</h2>
+        <p class="impact-intro">Últimas mediciones y pronósticos hidrométricos del INA.</p>
+
+        <RiverLevelTable :readings="orderedRivers" :loading="riverLevelsLoading" />
+
+        <div v-if="riverLevelsLoading && !orderedRivers.length" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Consultando estaciones…</div>
+        <div v-else class="river-list">
+          <article v-for="(reading, index) in orderedRivers" :key="reading.id" :ref="element => registerRiverRow(element, reading.id)" class="river-row" :class="!reading.isStale ? reading.status : undefined">
+            <div class="river-heading">
+              <div>
+                <h3>{{ riverLabel(reading) }}</h3>
+                <span v-if="reading.isStale && reading.level !== null" class="river-state">Medición con demora</span>
+                <span v-else-if="reading.status === 'alert'" class="river-state">En alerta</span>
+                <span v-else-if="reading.status === 'evacuation'" class="river-state">Nivel de evacuación</span>
+              </div>
+              <strong>{{ reading.level === null ? 'Sin dato' : `${formatLevel(reading.level)} m` }}</strong>
+            </div>
+            <div class="river-track" :class="{ animated: visibleRiverIds.has(reading.id) && reading.level !== null }" :style="riverStyle(reading, index)">
+              <div v-if="reading.level !== null" class="river-progress"><i /></div>
+              <i v-if="reading.alertLevel !== null" class="reference alert" />
+              <i v-if="reading.evacuationLevel !== null" class="reference evacuation" />
+            </div>
+            <div class="river-labels"><span>0 m</span><span>Alerta: {{ thresholdLabel(reading, reading.alertLevel) }}</span><span>Evacuación: {{ thresholdLabel(reading, reading.evacuationLevel) }}</span></div>
+          </article>
+        </div>
+      </section>
+
       <section class="impact-block city-impact">
         <h2 id="impact-title" class="impact-title">Impacto en la ciudad</h2>
         <p class="impact-intro">Lo que reportan los vecinos y lo que hay en riesgo.</p>
@@ -164,28 +196,6 @@ onBeforeUnmount(() => riverObserver?.disconnect())
           <p class="garello-location">Colastiné Norte · Santa Fe</p>
           <p class="garello-description">La obra del terraplén se encuentra inconclusa. Su estado es relevante para la protección hídrica del sector.</p>
         </article>
-      </section>
-
-      <section class="impact-block rivers-block">
-        <h2 class="impact-title">Altura de los ríos</h2>
-        <p class="impact-intro">Nivel actual frente a los umbrales de alerta y evacuación.</p>
-        <p class="data-note">Datos: INA. Información actualizada automáticamente.</p>
-
-        <div v-if="riverLevelsLoading && !orderedRivers.length" class="loading-row"><LoaderCircle :size="18" class="animate-spin" /> Consultando estaciones…</div>
-        <div v-else class="river-list">
-          <article v-for="(reading, index) in orderedRivers" :key="reading.id" :ref="element => registerRiverRow(element, reading.id)" class="river-row">
-            <div class="river-heading">
-              <h3>{{ riverLabel(reading) }}</h3>
-              <strong>{{ reading.level === null ? 'Sin dato' : `${formatLevel(reading.level)} m` }}</strong>
-            </div>
-            <div class="river-track" :class="{ animated: visibleRiverIds.has(reading.id) && reading.level !== null }" :style="riverStyle(reading, index)">
-              <div v-if="reading.level !== null" class="river-progress"><i /></div>
-              <i v-if="reading.alertLevel !== null" class="reference alert" />
-              <i v-if="reading.evacuationLevel !== null" class="reference evacuation" />
-            </div>
-            <div class="river-labels"><span>0 m</span><span>Alerta: {{ thresholdLabel(reading, reading.alertLevel) }}</span><span>Evacuación: {{ thresholdLabel(reading, reading.evacuationLevel) }}</span></div>
-          </article>
-        </div>
       </section>
 
       <section class="impact-block forecast-block">
@@ -239,10 +249,14 @@ onBeforeUnmount(() => riverObserver?.disconnect())
 .river-row { padding: 23px 0 28px; border-top: 1px solid rgba(255,255,255,.12); }
 .river-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
 .river-heading h3 { font-size: 12px; font-weight: 700; }
-.river-heading strong { font-size: 23px; letter-spacing: -.025em; }
+.river-heading strong { color: var(--river-accent, #fff); font-size: 23px; letter-spacing: -.025em; }
+.rivers-block { scroll-margin-top: 24px; }
+.river-row.alert { --river-accent: #ffcc6e; --river-state-background: #573916; }
+.river-row.evacuation { --river-accent: #ffa3a8; --river-state-background: #71252e; }
+.river-state { display: inline-block; margin-top: 6px; border-radius: 4px; padding: 3px 6px; background: var(--river-state-background, #273754); color: var(--river-accent, #c5d2e6); font-size: 11px; font-weight: 700; }
 .river-track { --level: 0%; --alert-position: 0%; --evacuation-position: 0%; --delay: 0ms; position: relative; height: 8px; margin-top: 24px; border-radius: 999px; background: #4c5875; }
 .river-progress { position: absolute; z-index: 2; left: 0; top: 0; width: 0; height: 8px; border-radius: inherit; background: #52617e; }
-.river-progress i { position: absolute; right: -5px; top: -2px; width: 12px; height: 12px; border-radius: 50%; background: #63b5e7; box-shadow: 0 0 11px rgba(99,181,231,.42); }
+.river-progress i { position: absolute; right: -5px; top: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--river-accent, #63b5e7); box-shadow: 0 0 11px var(--river-accent, #63b5e76b); }
 .river-track.animated .river-progress { animation: river-rise 1.2s cubic-bezier(.22,.72,.2,1) var(--delay) forwards; }
 .reference { position: absolute; z-index: 1; top: -2px; width: 12px; height: 12px; border-radius: 50%; filter: blur(1px); opacity: .58; }
 .reference.alert { left: var(--alert-position); background: #eebf48; box-shadow: 0 0 13px #eebf48; }

@@ -271,12 +271,17 @@ function trendLabel(reading: RiverLevelReading) {
 }
 
 function riverReadingProperties(reading: RiverLevelReading) {
+  const highWater = !reading.isStale && (reading.status === 'alert' || reading.status === 'evacuation')
+  const mapStatus = reading.status === 'evacuation' ? 'Nivel de evacuación' : 'En alerta'
   return {
     id: reading.id,
     riverName: reading.riverName,
     stationName: reading.stationName,
     mapTitleLabel: `${reading.riverName} · ${reading.mapLabel}`,
     levelLabel: levelLabel(reading.level),
+    mapLevelLabel: `${levelLabel(reading.level)}${highWater ? ` · ${mapStatus}` : ''}`,
+    highWater,
+    mapLabelColor: highWater ? (reading.status === 'evacuation' ? '#9b2028' : '#894200') : '#092235',
     observedAtLabel: reading.observedAt ? riverDateFormatter.format(new Date(reading.observedAt)) : 'Sin registro reciente',
     updatedAtLabel: reading.updatedAt ? riverDateTimeFormatter.format(new Date(reading.updatedAt)) : '',
     trendLabel: trendLabel(reading),
@@ -835,7 +840,7 @@ function addRiverLevelLayers() {
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 15, 16, 22],
         'circle-color': ['get', 'markerColor'],
-        'circle-opacity': 0.18,
+        'circle-opacity': ['case', ['get', 'highWater'], 0.42, 0.18],
         'circle-blur': 0.28,
       },
     })
@@ -862,7 +867,7 @@ function addRiverLevelLayers() {
       minzoom: 9,
       layout: {
         visibility,
-        'text-field': ['concat', ['get', 'mapTitleLabel'], '\n', ['get', 'levelLabel']],
+        'text-field': ['concat', ['get', 'mapTitleLabel'], '\n', ['get', 'mapLevelLabel']],
         'text-font': ['Open Sans Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10.5, 14, 12],
         'text-offset': [0, 1.35],
@@ -874,7 +879,7 @@ function addRiverLevelLayers() {
         'text-ignore-placement': true,
       },
       paint: {
-        'text-color': '#092235',
+        'text-color': ['get', 'mapLabelColor'],
         'text-halo-color': 'rgba(255, 255, 255, .96)',
         'text-halo-width': 2,
       },
